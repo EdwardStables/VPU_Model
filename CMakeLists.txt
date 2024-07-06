@@ -5,6 +5,7 @@ set (CMAKE_CXX_STANDARD 20)
 
 add_executable(vpu
     src/main.cpp
+    src/config.cpp
     src/manager_core.cpp
     src/memory.cpp
 )

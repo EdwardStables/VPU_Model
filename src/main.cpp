@@ -5,13 +5,13 @@
 #include <string>
 #include <tuple>
 #include <vector>
-
+#include "config.h"
 
 void initialise_state(std::unique_ptr<vpu::mem::Memory>& memory) {
     
 };
 
-void parse_arguments(int argc, char *argv[]) {
+Config parse_arguments(int argc, char *argv[]) {
     if (argc == 1) {
         std::cout << "Error: simulator requires at least one argument. Use --help to see details." << std::endl;
         exit(1);
@@ -28,7 +28,7 @@ void parse_arguments(int argc, char *argv[]) {
     };
 
     bool print_help = false;
-    bool error = true;
+    bool error = false;
 
     for (int i = 1; i < argc; i++){
         bool found = false;
@@ -49,17 +49,21 @@ void parse_arguments(int argc, char *argv[]) {
             }
             if (error) break;
         } else {
+            found = true;
             if (positional_arguments_seen >= positional_arguments.size()){
-                std::cout << "Unexpected argument " << argv[i] << std::endl;
+                std::cerr << "Unexpected argument " << argv[i] << std::endl;
                 print_help=true;
+                error = true;
             } else {
                 auto& [message,value] = positional_arguments[positional_ordering[positional_arguments_seen]];
                 value = argv[i];
+                positional_arguments_seen++;
             }
         }
         if (!found){
-            std::cout << "Unknown argument flag " << argv[i] << std::endl;
+            std::cerr << "Unknown argument flag " << argv[i] << std::endl;
             print_help = true;
+            error = true;
             break;
         }
     }
@@ -69,16 +73,17 @@ void parse_arguments(int argc, char *argv[]) {
     }
 
     if (!print_help && positional_arguments_seen < positional_arguments.size()) {
-        std::cout << "Missing expected argument '" << positional_ordering[positional_arguments_seen] << "'" << std::endl;
+        std::cerr << "Missing expected argument '" << positional_ordering[positional_arguments_seen] << "'" << std::endl;
         print_help = true;
+        error = true;
     }
 
     if (print_help){
-        std::cout << argv[0] << " ";
+        std::cerr << argv[0] << " ";
         size_t max_len = 0;
         for (auto& name : positional_ordering) {
             max_len = std::max(max_len, name.size());
-            std::cout << name << " ";
+            std::cerr << name << " ";
         }
         for (auto& [name,attrs] : optional_arguments) {
             auto& [long_arg, short_arg, msg, cnt, limit] = attrs; 
@@ -86,26 +91,26 @@ void parse_arguments(int argc, char *argv[]) {
             max_len = std::max(max_len, hint_name.size());
         }
         max_len += 4;
-        std::cout << "<optional flags>" << std::endl;
+        std::cerr << "<optional flags>" << std::endl;
 
-        std::cout << "\n" << "Positional Arguments:" << std::endl;
+        std::cerr << "\n" << "Positional Arguments:" << std::endl;
 
         for (auto& name : positional_ordering) {
             size_t padding = max_len - name.size();
-            std::cout << "    " << name;
-            for (int i = 0; i < padding; i++) std::cout << " ";
-            std::cout << std::get<0>(positional_arguments[name]) << std::endl;
+            std::cerr << "    " << name;
+            for (int i = 0; i < padding; i++) std::cerr << " ";
+            std::cerr << std::get<0>(positional_arguments[name]) << std::endl;
         }
 
-        std::cout << "\n" << "Optional Arguments:" << std::endl;
+        std::cerr << "\n" << "Optional Arguments:" << std::endl;
 
         for (auto& [name, attrs] : optional_arguments) {
             auto& [long_arg, short_arg, msg, cnt, limit] = attrs; 
             std::string hint_name = long_arg + "/" + short_arg;
             size_t padding = max_len - hint_name.size();
-            std::cout << "    " << hint_name;
-            for (int i = 0; i < padding; i++) std::cout << " ";
-            std::cout << msg << std::endl;
+            std::cerr << "    " << hint_name;
+            for (int i = 0; i < padding; i++) std::cerr << " ";
+            std::cerr << msg << std::endl;
         }
         exit(error ? 1 : 0);
     }
@@ -113,10 +118,19 @@ void parse_arguments(int argc, char *argv[]) {
     if (error){
         exit(1);
     }
+
+    Config config;
+
+    config.input_file = std::get<1>(positional_arguments["program"]);
+
+    return config;
 }
 
 int main(int argc, char *argv[]) {
-    parse_arguments(argc, argv);
+    Config config = parse_arguments(argc, argv);
+    if (!config.validate()) {
+        exit(1);
+    }
 
     auto memory = std::make_unique<vpu::mem::Memory>(); 
     memory->write(1234, 0xDEADBEEF);
