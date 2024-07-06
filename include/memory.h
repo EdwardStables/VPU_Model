@@ -1,11 +1,18 @@
+#include <memory>
 #include <cstdint>
 #include <array>
 #include <cstdio>
+#include <fstream>
+#include <filesystem>
 
 namespace vpu::mem {
 
+class Memory;
 class Snooper {
-    //TODO
+public:
+    Snooper() = delete;
+    static void copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file);
+    static uint8_t get_byte(std::unique_ptr<Memory>& memory, uint32_t index);
 };
 
 //512MB

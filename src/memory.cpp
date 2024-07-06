@@ -1,8 +1,25 @@
 #include "memory.h"
 #include <assert.h>
 #include <algorithm>
+#include <iostream>
+
 
 namespace vpu::mem {
+
+uint8_t Snooper::get_byte(std::unique_ptr<Memory>& memory, uint32_t index) {
+    return memory->data[index];
+}
+
+void Snooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file) {
+    std::ifstream program(file, std::ios::binary | std::ios::in);
+    if (!program.is_open()) {
+        std::cerr << "Failed to open " << file << " for reading.";
+        exit(1);
+    }
+    //Copying to a vector then array seems silly, but going directly to the array fails to compile
+    std::vector<char> new_data{std::istreambuf_iterator<char>(program), std::istreambuf_iterator<char>()};
+    std::copy(new_data.begin(), new_data.end(), memory->data.begin());
+}
 
 Memory::Memory() {
     clear(0, MEM_SIZE);

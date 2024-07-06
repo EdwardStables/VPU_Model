@@ -6,9 +6,11 @@
 #include <tuple>
 #include <vector>
 #include "config.h"
+#include <fstream>
+#include <iterator>
 
-void initialise_state(std::unique_ptr<vpu::mem::Memory>& memory) {
-    
+void initialise_state(Config& config, std::unique_ptr<vpu::mem::Memory>& memory) {
+    vpu::mem::Snooper::copy_file_in(memory, config.input_file);
 };
 
 Config parse_arguments(int argc, char *argv[]) {
@@ -131,9 +133,15 @@ int main(int argc, char *argv[]) {
     if (!config.validate()) {
         exit(1);
     }
-
     auto memory = std::make_unique<vpu::mem::Memory>(); 
-    memory->write(1234, 0xDEADBEEF);
-    std::cout << std::hex << memory->read(1234) << std::endl;
+    initialise_state(config, memory);
+
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << unsigned(vpu::mem::Snooper::get_byte(memory, 0)) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << unsigned(vpu::mem::Snooper::get_byte(memory, 1)) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << unsigned(vpu::mem::Snooper::get_byte(memory, 2)) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << unsigned(vpu::mem::Snooper::get_byte(memory, 3)) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(8) << memory->read(0x0) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(8) << memory->read(0x4) << std::endl;
+    std::cout << std::hex << std::setfill('0') << std::setw(8) << memory->read(0x8) << std::endl;
     return 0;
 }
