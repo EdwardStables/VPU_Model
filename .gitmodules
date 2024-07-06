@@ -1,0 +1,3 @@
+[submodule "VPU_ASM"]
+	path = VPU_ASM
+	url = git@github.com:EdwardStables/VPU_ASM.git
