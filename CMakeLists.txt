@@ -5,7 +5,11 @@ set (CMAKE_CXX_STANDARD 20)
 
 set (VPU_ASM ${CMAKE_CURRENT_SOURCE_DIR}/VPU_ASM)
 set (VPU_DEFS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/defs)
+
+### NON-CONFIGURABLE CONSTANTS IN CODE ###
 set (VPU_DEFS_NAME defs_pkg)
+set (DEFS_NAMESPACE vpu::defs)
+### NON-CONFIGURABLE CONSTANTS IN CODE ###
 
 add_custom_command(
     OUTPUT ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.h ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
@@ -13,7 +17,7 @@ add_custom_command(
             ${VPU_ASM}/instructions.py
             ${VPU_ASM}/templates/cpp_def.cpp.j2
             ${VPU_ASM}/templates/cpp_def.h.j2
-    COMMAND ${VPU_ASM}/instructions.py ${VPU_ASM}/instructions.yaml --cpp ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}
+    COMMAND ${VPU_ASM}/instructions.py ${VPU_ASM}/instructions.yaml --cpp ${VPU_DEFS_DIR}/${VPU_DEFS_NAME} --namespace ${DEFS_NAMESPACE}
 )
 
 add_executable(vpu
