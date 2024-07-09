@@ -22,6 +22,17 @@ void dump_program(std::unique_ptr<vpu::mem::Memory>& memory){
     }
 }
 
+void run_program(vpu::core::ManagerCore& core, vpu::config::Config& config) {
+    uint32_t cycle = 0;    
+
+    if (config.trace) core.print_trace(cycle);
+    while (!core.check_has_halted()) {
+        cycle++;
+        core.run_cycle();
+        if (config.trace) core.print_trace(cycle);
+    }
+}
+
 
 int main(int argc, char *argv[]) {
     auto config = vpu::config::parse_arguments(argc, argv);
@@ -38,9 +49,7 @@ int main(int argc, char *argv[]) {
     }
 
     vpu::core::ManagerCore core(config, memory);
-    while (!core.check_has_halted()) {
-        core.run_cycle();
-    }
+    run_program(core, config);
 
     return 0;
 }
