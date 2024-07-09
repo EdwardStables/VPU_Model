@@ -35,6 +35,7 @@ void ManagerCore::run_cycle() {
         case vpu::defs::NOP:
             break;
         case vpu::defs::HLT:
+            next_pc = PC();
             has_halted = true;
             break;
         case vpu::defs::MOV_I24:
@@ -64,7 +65,7 @@ uint32_t ManagerCore::PC() {
 
 void ManagerCore::print_trace(uint32_t cycle) {
     std::cout << "Cycle: " << cycle << "\t";
-    std::cout << "PC: " << PC() << "\t";
+    std::cout << "PC: " << std::hex << PC() << "\t";
     std::cout << "ACC: " << registers[vpu::defs::ACC] << "\t";
     std::cout << "\n";
 }
