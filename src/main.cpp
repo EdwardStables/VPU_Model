@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <iomanip>
 
 #include "memory.h"
 #include "config.h"
@@ -15,7 +16,8 @@ void dump_program(std::unique_ptr<vpu::mem::Memory>& memory){
         //Region end marker
         if (data == 0xFFFFFFFF) break;
         auto instr = vpu::defs::get_instr(data);
-        std::cout << std::hex << i*4 << " " << vpu::defs::instr_to_string(instr) << std::endl;
+        std::cout << std::setfill('0') << std::setw(8) << std::hex << i*4;
+        std::cout << " " << vpu::defs::instr_to_string(instr) << std::endl;
     }
 }
 
