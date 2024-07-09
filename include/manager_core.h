@@ -19,6 +19,7 @@ public:
     void run_cycle();
     bool check_has_halted();
     uint32_t PC();
+    void print_trace(uint32_t cycle=0);
 };
 
 }

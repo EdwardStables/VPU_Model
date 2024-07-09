@@ -31,8 +31,9 @@ Config parse_arguments(int argc, char *argv[]) {
     };
 
     std::unordered_map<std::string,std::tuple<std::string,std::string,std::string,int,int>> optional_arguments = {
-        {"help", {"--help", "-h", "Print this message"                             , 0, 1}},
-        {"dump", {"--dump", "-d", "Dump a human readable copy of the input program", 0, 1}}
+        {"help",  {"--help",  "-h", "Print this message"                             , 0, 1}},
+        {"dump",  {"--dump",  "-d", "Dump a human readable copy of the input program", 0, 1}},
+        {"trace", {"--trace", "-t", "Print core state each clock",                     0, 1}}
     };
 
     bool print_help = false;
@@ -131,6 +132,7 @@ Config parse_arguments(int argc, char *argv[]) {
 
     config.input_file = std::get<1>(positional_arguments["program"]);
     config.dump = (bool)std::get<3>(optional_arguments["dump"]);
+    config.trace = (bool)std::get<3>(optional_arguments["trace"]);
 
     return config;
 }
