@@ -1,11 +1,5 @@
 #include <iostream>
 #include <memory>
-#include <unordered_map>
-#include <string>
-#include <tuple>
-#include <vector>
-#include <fstream>
-#include <iterator>
 
 #include "memory.h"
 #include "config.h"
