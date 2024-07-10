@@ -14,6 +14,7 @@ ManagerCore::ManagerCore(
     has_halted(false)
 {
     registers.fill(0);
+    flags.fill(0);
 }
 
 void ManagerCore::update_pc(uint32_t new_pc) {
@@ -41,13 +42,29 @@ void ManagerCore::run_cycle() {
         case vpu::defs::MOV_I24:
             registers[vpu::defs::ACC] = vpu::defs::get_u24(instr);
             break;
+        case vpu::defs::MOV_R_I16:
+            registers[vpu::defs::get_register(instr,0)] = vpu::defs::get_u16(instr);
+            break;
         case vpu::defs::ADD_I24:
             registers[vpu::defs::ACC] += vpu::defs::get_u24(instr);
             break;
         case vpu::defs::JMP_L:
             next_pc = vpu::defs::get_label(instr);
             break;
+        case vpu::defs::CMP_R:
+            flags[0] = registers[vpu::defs::get_register(instr,0)] == 0;
+            break;
+        case vpu::defs::CMP_R_R:
+            std::cout << "flag set " << flags[0];
+            flags[0] = registers[vpu::defs::get_register(instr,0)] == registers[vpu::defs::get_register(instr,1)];
+            std::cout << " " << flags[0] << std::endl;
+            break;
+        case vpu::defs::BRA_L:
+            if (flags[0]) next_pc = vpu::defs::get_label(instr);
+            break;
         default:
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
+            std::cerr << " at address " << std::hex << PC() << std::endl;
             assert(false);
     }
 
@@ -65,8 +82,11 @@ uint32_t ManagerCore::PC() {
 
 void ManagerCore::print_trace(uint32_t cycle) {
     std::cout << "Cycle: " << cycle << "\t";
-    std::cout << "PC: " << std::hex << PC() << "\t";
-    std::cout << "ACC: " << registers[vpu::defs::ACC] << "\t";
+    for (int i = 0; i < vpu::defs::REGISTER_COUNT; i++){
+        std::cout << vpu::defs::register_to_string((vpu::defs::Register)i);
+        std::cout << " " << std::hex << registers[i] << " \t";
+    }
+    std::cout << "  C " << flags[0] << "  Z " << flags[1];
     std::cout << "\n";
 }
 

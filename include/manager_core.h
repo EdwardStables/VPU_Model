@@ -12,6 +12,8 @@ class ManagerCore {
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> registers;
     vpu::config::Config& config;
     std::unique_ptr<vpu::mem::Memory>& memory;
+    //TODO: configure this from the ISA, hard-code C to 0, O to 1
+    std::array<bool,2> flags;
     bool has_halted;
     void update_pc(uint32_t new_pc);
 public:
