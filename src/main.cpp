@@ -24,12 +24,22 @@ void dump_program(std::unique_ptr<vpu::mem::Memory>& memory){
 
 void run_program(vpu::core::ManagerCore& core, vpu::config::Config& config) {
     uint32_t cycle = 0;    
-
+    uint32_t step_count = 1;
     if (config.trace) core.print_trace(cycle);
     while (!core.check_has_halted()) {
         cycle++;
         core.run_cycle();
+
+        if (step_count > 0) step_count--;
         if (config.trace) core.print_trace(cycle);
+        if (config.step && step_count == 0){
+            std::string step_count_str; 
+            std::getline(std::cin, step_count_str);
+            if (step_count_str.length() == 0)
+                step_count = 0;
+            else
+                step_count = std::stoi(step_count_str);
+        }
     }
 }
 
