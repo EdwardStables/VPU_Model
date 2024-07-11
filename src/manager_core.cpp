@@ -52,15 +52,20 @@ void ManagerCore::run_cycle() {
             next_pc = vpu::defs::get_label(instr);
             break;
         case vpu::defs::CMP_R:
-            flags[0] = registers[vpu::defs::get_register(instr,0)] == 0;
+            if (registers[vpu::defs::get_register(instr,0)] == 0)
+                set_flag(vpu::defs::C);
+            else
+                unset_flag(vpu::defs::C);
             break;
         case vpu::defs::CMP_R_R:
-            std::cout << "flag set " << flags[0];
-            flags[0] = registers[vpu::defs::get_register(instr,0)] == registers[vpu::defs::get_register(instr,1)];
-            std::cout << " " << flags[0] << std::endl;
+            if (registers[vpu::defs::get_register(instr,0)] == registers[vpu::defs::get_register(instr,1)])
+                set_flag(vpu::defs::C);
+            else
+                unset_flag(vpu::defs::C);
             break;
         case vpu::defs::BRA_L:
-            if (flags[0]) next_pc = vpu::defs::get_label(instr);
+            if (get_flag(vpu::defs::C))
+                next_pc = vpu::defs::get_label(instr);
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
@@ -70,6 +75,18 @@ void ManagerCore::run_cycle() {
 
 
     update_pc(next_pc);
+}
+
+void ManagerCore::set_flag(vpu::defs::Flag flag) {
+    flags[flag] = 1;
+}
+
+void ManagerCore::unset_flag(vpu::defs::Flag flag) {
+    flags[flag] = 0;
+}
+
+bool ManagerCore::get_flag(vpu::defs::Flag flag) {
+    return flags[flag];
 }
 
 bool ManagerCore::check_has_halted() {
@@ -86,7 +103,10 @@ void ManagerCore::print_trace(uint32_t cycle) {
         std::cout << vpu::defs::register_to_string((vpu::defs::Register)i);
         std::cout << " " << std::hex << registers[i] << " \t";
     }
-    std::cout << "  C " << flags[0] << "  Z " << flags[1];
+    for (int i = 0; i < vpu::defs::FLAG_COUNT; i++){
+        std::cout << vpu::defs::flag_to_string((vpu::defs::Flag)i);
+        std::cout << " " << std::hex << flags[i] << " \t";
+    }
     std::cout << "\n";
 }
 
