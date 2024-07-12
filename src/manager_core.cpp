@@ -31,6 +31,8 @@ void ManagerCore::run_cycle() {
     }
 
     vpu::defs::Opcode opcode = vpu::defs::get_opcode(instr);
+    uint32_t unsigned_temp;
+    int32_t signed_temp;
 
     switch(opcode) {
         case vpu::defs::NOP:
@@ -44,6 +46,9 @@ void ManagerCore::run_cycle() {
             break;
         case vpu::defs::MOV_R_I16:
             registers[vpu::defs::get_register(instr,0)] = vpu::defs::get_u16(instr);
+            break;
+        case vpu::defs::MOV_R_R:
+            registers[vpu::defs::get_register(instr,0)] = registers[vpu::defs::get_register(instr,1)];
             break;
         case vpu::defs::ADD_I24:
             registers[vpu::defs::ACC] += vpu::defs::get_u24(instr);
@@ -66,6 +71,36 @@ void ManagerCore::run_cycle() {
         case vpu::defs::BRA_L:
             if (get_flag(vpu::defs::C))
                 next_pc = vpu::defs::get_label(instr);
+            break;
+        case vpu::defs::ASR_R:
+            signed_temp = registers[vpu::defs::ACC];
+            signed_temp >>= registers[vpu::defs::get_register(instr,0)];
+            registers[vpu::defs::ACC] = signed_temp;
+            break;
+        case vpu::defs::ASR_I24:
+            signed_temp = registers[vpu::defs::ACC];
+            signed_temp >>= vpu::defs::get_u24(instr);
+            registers[vpu::defs::ACC] = signed_temp;
+            break;
+        case vpu::defs::LSR_R:
+            unsigned_temp = registers[vpu::defs::ACC];
+            unsigned_temp >>= registers[vpu::defs::get_register(instr,0)];
+            registers[vpu::defs::ACC] = unsigned_temp;
+            break;
+        case vpu::defs::LSR_I24:
+            unsigned_temp = registers[vpu::defs::ACC];
+            unsigned_temp >>= vpu::defs::get_u24(instr);
+            registers[vpu::defs::ACC] = unsigned_temp;
+            break;
+        case vpu::defs::LSL_R:
+            unsigned_temp = registers[vpu::defs::ACC];
+            unsigned_temp <<= registers[vpu::defs::get_register(instr,0)];
+            registers[vpu::defs::ACC] = unsigned_temp;
+            break;
+        case vpu::defs::LSL_I24:
+            unsigned_temp = registers[vpu::defs::ACC];
+            unsigned_temp <<= vpu::defs::get_u24(instr);
+            registers[vpu::defs::ACC] = unsigned_temp;
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
