@@ -1,9 +1,15 @@
 import pytest
 from pathlib import Path
 
-PROGS = Path("VPU_ASM/test_programs")
-make_args = lambda file: [(PROGS/(file+".asm"),"test/binaries/"+file+".out")]
+TEST_FILES = [
+    "nops",
+    #"branch",
+    #"inc",
+    #"jump",
+    #"left_shifts",
+    #"right_shifts",
+]
 
-@pytest.mark.parametrize("compile_program", make_args("nops"), indirect=True)
-def test_nops(compile_program):
+@pytest.mark.parametrize("run_program, expected_registers", [(p,p) for p in TEST_FILES], indirect=True)
+def test_register_state(run_program,expected_registers):
     pass
