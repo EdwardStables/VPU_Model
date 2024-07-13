@@ -8,7 +8,15 @@
 
 namespace vpu::core {
 
+class ManagerCore;
+class ManagerCoreSnooper {
+public:
+    ManagerCoreSnooper() = delete;
+    static uint32_t get_register(ManagerCore& core, vpu::defs::Register reg);
+};
+
 class ManagerCore {
+    friend ManagerCoreSnooper;
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> registers;
     vpu::config::Config& config;
     std::unique_ptr<vpu::mem::Memory>& memory;
@@ -18,11 +26,11 @@ class ManagerCore {
     void set_flag(vpu::defs::Flag flag);
     void unset_flag(vpu::defs::Flag flag);
     bool get_flag(vpu::defs::Flag flag);
+    uint32_t PC();
 public:
     ManagerCore(vpu::config::Config& config, std::unique_ptr<vpu::mem::Memory>& memory) ;
     void run_cycle();
     bool check_has_halted();
-    uint32_t PC();
     void print_trace(uint32_t cycle=0);
 };
 

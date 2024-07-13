@@ -10,9 +10,9 @@
 namespace vpu::mem {
 
 class Memory;
-class Snooper {
+class MemorySnooper {
 public:
-    Snooper() = delete;
+    MemorySnooper() = delete;
     static void copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file);
     static uint8_t get_byte(std::unique_ptr<Memory>& memory, uint32_t index);
 };
@@ -21,7 +21,7 @@ public:
 constexpr uint32_t MEM_SIZE = 512 * 1024 * 1024;
 
 class Memory {
-    friend Snooper;
+    friend MemorySnooper;
     std::array<uint8_t,MEM_SIZE> data;
 public:
     Memory();

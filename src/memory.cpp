@@ -6,11 +6,11 @@
 
 namespace vpu::mem {
 
-uint8_t Snooper::get_byte(std::unique_ptr<Memory>& memory, uint32_t index) {
+uint8_t MemorySnooper::get_byte(std::unique_ptr<Memory>& memory, uint32_t index) {
     return memory->data[index];
 }
 
-void Snooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file) {
+void MemorySnooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file) {
     std::ifstream program(file, std::ios::binary | std::ios::in);
     if (!program.is_open()) {
         std::cerr << "Failed to open " << file << " for reading.";

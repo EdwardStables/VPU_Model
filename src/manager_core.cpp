@@ -5,6 +5,10 @@
 
 namespace vpu::core {
 
+uint32_t ManagerCoreSnooper::get_register(ManagerCore& core, vpu::defs::Register reg) {
+    return core.registers[reg];
+}
+
 ManagerCore::ManagerCore(
     vpu::config::Config& config,
     std::unique_ptr<vpu::mem::Memory>& memory
