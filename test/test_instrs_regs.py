@@ -10,6 +10,19 @@ TEST_FILES = [
     #"right_shifts",
 ]
 
-@pytest.mark.parametrize("run_program, expected_registers", [(p,p) for p in TEST_FILES], indirect=True)
-def test_register_state(run_program,expected_registers):
-    pass
+@pytest.fixture
+def expected_registers(request):
+    prog = request.param
+    expected = {
+        "nops" : set()
+    }
+    assert prog in expected
+    yield expected[prog]
+
+@pytest.mark.parametrize(
+    "run_program, actual_registers, expected_registers",
+    [(p,p,p) for p in TEST_FILES],
+    indirect=True
+)
+def test_register_state(run_program,actual_registers,expected_registers):
+    assert actual_registers == expected_registers

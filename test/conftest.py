@@ -25,7 +25,7 @@ def run_program(isa, request, clean):
     write_out(Program(inp, isa), Path(bin))
     assert bin.exists()
 
-    proc = run(f"build/vpu {bin} --dump_regs {DUMP}", timeout=1, shell=True)
+    proc = run(f"build/vpu {bin} --dump_regs {dump}", timeout=1, shell=True)
     assert proc.returncode == 0
     assert dump.exists()
 
@@ -33,6 +33,16 @@ def run_program(isa, request, clean):
     if clean:
         Path(bin).unlink()
         (DUMP/(prog + ".reg")).unlink()
+
+@pytest.fixture
+def actual_registers(request):
+    prog = request.param
+    dump = DUMP / (prog + ".reg")
+    vals = set()
+    with dump.open() as f:
+        for line in f:
+            vals.add(tuple(line.split()))
+    yield vals
 
 def pytest_addoption(parser):
     parser.addoption("--no_clean", action="store_true")
