@@ -4,3 +4,5 @@ build
 defs
 .pytest_cache
 __pycache__
+test/dumps
+test/binaries

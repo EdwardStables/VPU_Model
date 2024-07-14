@@ -1,9 +1,10 @@
 import pytest
 from pathlib import Path
+from util import RegState
 
 TEST_FILES = [
     "nops",
-    #"branch",
+    "branch",
     #"inc",
     #"jump",
     #"left_shifts",
@@ -14,7 +15,8 @@ TEST_FILES = [
 def expected_registers(request):
     prog = request.param
     expected = {
-        "nops" : set()
+        "nops" :   RegState( 0, 0x10,  0, 0, 0, 0, 0, 0, 0, 0),
+        "branch" : RegState(10, 0x18, 10, 0, 0, 0, 0, 0, 0, 0),
     }
     assert prog in expected
     yield expected[prog]
