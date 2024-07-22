@@ -44,7 +44,7 @@ def actual_registers(request):
         for line in f:
             reg, val = line.split()
             v[reg] = int(val)
-    regstate = RegState(v['ACC'],v['PC'],v['R1'],v['R2'],v['R3'],v['R4'],v['R5'],v['R6'],v['R7'],v['R8'])
+    regstate = RegState(v['PC'],v['ACC'],v['R1'],v['R2'],v['R3'],v['R4'],v['R5'],v['R6'],v['R7'],v['R8'])
     yield regstate
 
 def pytest_addoption(parser):
