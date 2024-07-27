@@ -345,20 +345,28 @@ uint32_t ManagerCore::PC() {
 }
 
 void ManagerCore::print_status_start() {
+    if (!(config.pipeline || config.trace)) return;
+
+    std::cout << "           ";
     if (config.pipeline)
-        std::cout << "        \t" << pipeline_heading() << "\n";
+        std::cout << "\t" << pipeline_heading();
     if (config.trace)
-        std::cout << "\t" << trace_string() << "\n";
+        std::cout << "\t" << trace_string();
+    std::cout << "\n";
 }
 
 void ManagerCore::print_status(uint32_t cycle) {
     std::string cycle_str = "Cycle: " + std::to_string(cycle) + "  ";
+    if (config.pipeline || config.trace)
+        std::cout << cycle_str;
 
     if (config.pipeline)
-        std::cout << cycle_str << "\t" << pipeline_string() << "\n";
+        std::cout << "\t" << pipeline_string();
 
     if (config.trace)
-        std::cout << cycle_str << "\t" << trace_string() << "\n";
+        std::cout << "\t" << trace_string();
+
+    std::cout << "\n";
 }
 
 std::string ManagerCore::pipeline_heading() {
