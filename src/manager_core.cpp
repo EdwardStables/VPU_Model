@@ -41,16 +41,17 @@ void ManagerCore::run_cycle() {
 
 void ManagerCore::stage_fetch() {
 
-    if (has_halted){
-        fetch_valid_output = false;
-        return;
-    }
-
     //TODO: icache and stalling
     fetch_valid_output = true;
     decode_instruction = memory->read(PC());
     uint32_t next_pc = flush_set ? flush_next_pc : PC() + 4;
     update_pc(next_pc);
+
+    //Halt after fetch to retain correct final PC on HLT flush
+    if (has_halted){
+        fetch_valid_output = false;
+        return;
+    }
     decode_next_pc = next_pc;
 }
 
@@ -215,6 +216,8 @@ void ManagerCore::stage_execute() {
         case vpu::defs::NOP:
             break;
         case vpu::defs::HLT:
+            next_pc = execute_next_pc - 4;
+            check_flush = true;
             has_halted = true;
             break;
         case vpu::defs::MOV_R_I16:
