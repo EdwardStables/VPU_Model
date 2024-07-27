@@ -34,6 +34,7 @@ class ManagerCore {
     //Instruction Fetch
     void stage_fetch();
     bool fetch_valid_output = false;
+    bool fetch_seen_hlt = false;
     uint32_t decode_instruction;
     uint32_t decode_next_pc;
     

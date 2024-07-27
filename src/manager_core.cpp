@@ -40,10 +40,22 @@ void ManagerCore::run_cycle() {
 }
 
 void ManagerCore::stage_fetch() {
+    if (!flush_set && fetch_seen_hlt){
+        fetch_valid_output = false;
+        return;
+    }
+    fetch_seen_hlt = false;
 
     //TODO: icache and stalling
     fetch_valid_output = true;
     decode_instruction = memory->read(PC());
+    
+    //Don't increment PC or end output for segment end.
+    if (vpu::defs::get_opcode(decode_instruction) == vpu::defs::HLT){
+        fetch_seen_hlt = true;
+        return;
+    }
+
     uint32_t next_pc = flush_set ? flush_next_pc : PC() + 4;
     update_pc(next_pc);
 
@@ -207,6 +219,7 @@ void ManagerCore::stage_execute() {
     memory_reg_index = (vpu::defs::Register)0; //indicated PC, which is invalid and will be ignored
     memory_reg_value = 0;
     memory_opcode = execute_opcode;
+    execute_valid_output = true;
     
     bool check_flush = false;
     uint32_t next_pc = execute_next_pc;
@@ -215,11 +228,7 @@ void ManagerCore::stage_execute() {
     int32_t signed_temp;
     switch(execute_opcode) {
         case vpu::defs::NOP:
-            break;
-        case vpu::defs::HLT:
-            next_pc = execute_next_pc - 4;
-            check_flush = true;
-            has_halted = true;
+        case vpu::defs::HLT: //HLT is not actually applied until the final stage to ensure full writeback completes
             break;
         case vpu::defs::MOV_R_I16:
         case vpu::defs::MOV_R_R:
@@ -299,6 +308,10 @@ void ManagerCore::stage_writeback() {
     writeback_valid_output = memory_valid_output;
     writeback_commit_reg_index = writeback_reg_index;
     writeback_commit_reg_value = writeback_reg_value;
+
+    if (writeback_opcode == vpu::defs::HLT)    
+        has_halted = true;
+
     done_opcode = writeback_opcode;
 }
 
@@ -339,16 +352,13 @@ void ManagerCore::print_status_start() {
 }
 
 void ManagerCore::print_status(uint32_t cycle) {
-    if (config.pipeline || config.trace)
-        std::cout << "Cycle: " << cycle << "  ";
+    std::string cycle_str = "Cycle: " + std::to_string(cycle) + "  ";
 
     if (config.pipeline)
-        std::cout << "\t" << pipeline_string();
-
-    std::cout << "\n";
+        std::cout << cycle_str << "\t" << pipeline_string() << "\n";
 
     if (config.trace)
-        std::cout << "\t" << trace_string() << "\n";
+        std::cout << cycle_str << "\t" << trace_string() << "\n";
 }
 
 std::string ManagerCore::pipeline_heading() {
@@ -370,7 +380,14 @@ std::string ManagerCore::pipeline_string() {
     std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
 
     op += "| ";
-    op += fetch_valid_output ? vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(decode_instruction)) : na;
+    if (fetch_valid_output) {
+        if (decode_instruction == vpu::defs::SEGMENT_END)
+            op += vpu::defs::SEGMENT_END_WIDTH_STRING;
+        else
+            op += vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(decode_instruction));
+    }else {
+        op += na;
+    }
     op += " | ";
     op += decode_valid_output ? vpu::defs::opcode_to_string_fixed(execute_opcode) : na;
     op += " | ";
