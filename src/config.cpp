@@ -58,9 +58,10 @@ Config parse_arguments(int argc, char *argv[]) {
     std::unordered_map<std::string,Config::OptArg> optional_arguments = {
         {"help",      Config::OptArg::OptBoolean("--help",      "-h", "Print this message")},
         {"dump",      Config::OptArg::OptBoolean("--dump",      "-d", "Dump a human readable copy of the input program")},
+        {"pipeline",  Config::OptArg::OptBoolean("--pipeline",  "-p", "Print pipeline state")},
         {"trace",     Config::OptArg::OptBoolean("--trace",     "-t", "Print core state each clock")},
         {"step",      Config::OptArg::OptBoolean("--step",      "-s", "Step a specific number of instructions")},
-        {"dump_regs", Config::OptArg::OptString("--dump_regs", "-r", "Dump the register state in a file after completion")},
+        {"dump_regs", Config::OptArg::OptString( "--dump_regs", "-r", "Dump the register state in a file after completion")},
     };
 
     bool print_help = false;
@@ -184,6 +185,7 @@ Config parse_arguments(int argc, char *argv[]) {
 
     config.input_file = positional_arguments["program"].value;
     config.dump = std::get<bool>(optional_arguments["dump"].value);
+    config.pipeline = std::get<bool>(optional_arguments["pipeline"].value);
     config.trace = std::get<bool>(optional_arguments["trace"].value);
     config.step = std::get<bool>(optional_arguments["step"].value);
     config.dump_regs = std::get<std::string>(optional_arguments["dump_regs"].value);

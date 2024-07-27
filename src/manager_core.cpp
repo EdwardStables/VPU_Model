@@ -206,6 +206,7 @@ void ManagerCore::stage_execute() {
 
     memory_reg_index = (vpu::defs::Register)0; //indicated PC, which is invalid and will be ignored
     memory_reg_value = 0;
+    memory_opcode = execute_opcode;
     
     bool check_flush = false;
     uint32_t next_pc = execute_next_pc;
@@ -291,16 +292,18 @@ void ManagerCore::stage_memory() {
     memory_valid_output = execute_valid_output;
     writeback_reg_index = memory_reg_index;
     writeback_reg_value = memory_reg_value;
+    writeback_opcode = memory_opcode;
 }
 
 void ManagerCore::stage_writeback() {
-    writeback_valid = memory_valid_output;
+    writeback_valid_output = memory_valid_output;
     writeback_commit_reg_index = writeback_reg_index;
     writeback_commit_reg_value = writeback_reg_value;
+    done_opcode = writeback_opcode;
 }
 
 void ManagerCore::stage_writeback_commit() {
-    if (!writeback_valid || writeback_commit_reg_index == 0) return;
+    if (!writeback_valid_output || writeback_commit_reg_index == 0) return;
 
     registers[writeback_commit_reg_index] = writeback_commit_reg_value;
     if (execute_feedback_reg_value[writeback_commit_reg_index] == writeback_commit_reg_value) {
@@ -328,17 +331,70 @@ uint32_t ManagerCore::PC() {
     return registers[vpu::defs::PC];
 }
 
-void ManagerCore::print_trace(uint32_t cycle) {
-    std::cout << "Cycle: " << cycle << "\t";
+void ManagerCore::print_status_start() {
+    if (config.pipeline)
+        std::cout << "        \t" << pipeline_heading() << "\n";
+    if (config.trace)
+        std::cout << "\t" << trace_string() << "\n";
+}
+
+void ManagerCore::print_status(uint32_t cycle) {
+    if (config.pipeline || config.trace)
+        std::cout << "Cycle: " << cycle << "  ";
+
+    if (config.pipeline)
+        std::cout << "\t" << pipeline_string();
+
+    std::cout << "\n";
+
+    if (config.trace)
+        std::cout << "\t" << trace_string() << "\n";
+}
+
+std::string ManagerCore::pipeline_heading() {
+    std::array<std::string, 5> headers = {"FETCH","DECODE","EXECUTE","MEMORY","WRITEBACK"};
+    
+    std::string op = "|";
+    for (auto& h : headers){
+        op += " ";
+        h.insert(0, vpu::defs::MAX_OPCODE_LEN - h.size(), ' ');
+        op += h;
+        op += " |";
+    }
+
+    return op;
+}
+
+std::string ManagerCore::pipeline_string() {
+    std::string op;    
+    std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
+
+    op += "| ";
+    op += fetch_valid_output ? vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(decode_instruction)) : na;
+    op += " | ";
+    op += decode_valid_output ? vpu::defs::opcode_to_string_fixed(execute_opcode) : na;
+    op += " | ";
+    op += execute_valid_output ? vpu::defs::opcode_to_string_fixed(memory_opcode) : na;
+    op += " | ";
+    op += memory_valid_output ? vpu::defs::opcode_to_string_fixed(writeback_opcode) : na;
+    op += " | ";
+    op += writeback_valid_output ? vpu::defs::opcode_to_string_fixed(done_opcode) : na;
+    op += " |";
+
+    return op;
+}
+
+std::string ManagerCore::trace_string() {
+    std::string op;
     for (int i = 0; i < vpu::defs::REGISTER_COUNT; i++){
-        std::cout << vpu::defs::register_to_string((vpu::defs::Register)i);
-        std::cout << " " << std::hex << registers[i] << " \t";
+        op += vpu::defs::register_to_string((vpu::defs::Register)i);
+        op +=  " " + std::to_string(registers[i]) + " \t";
     }
     for (int i = 0; i < vpu::defs::FLAG_COUNT; i++){
-        std::cout << vpu::defs::flag_to_string((vpu::defs::Flag)i);
-        std::cout << " " << std::hex << flags[i] << " \t";
+        op += vpu::defs::flag_to_string((vpu::defs::Flag)i);
+        op += " " + std::to_string(flags[i]) + " \t";
     }
-    std::cout << "\n";
+    return op;
 }
 
 }

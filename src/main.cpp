@@ -41,13 +41,13 @@ void dump_regs(vpu::config::Config& config, vpu::core::ManagerCore& core) {
 void run_program(vpu::core::ManagerCore& core, vpu::config::Config& config) {
     uint32_t cycle = 0;    
     uint32_t step_count = 1;
-    if (config.trace) core.print_trace(cycle);
+    core.print_status_start();
     while (!core.check_has_halted()) {
         cycle++;
         core.run_cycle();
 
         if (step_count > 0) step_count--;
-        if (config.trace) core.print_trace(cycle);
+        core.print_status(cycle);
         if (config.step && step_count == 0){
             std::string step_count_str; 
             std::getline(std::cin, step_count_str);

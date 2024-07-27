@@ -56,28 +56,38 @@ class ManagerCore {
     void stage_execute();
     bool execute_valid_output = false;
     bool flush_set = false; 
+    vpu::defs::Opcode memory_opcode;
     uint32_t flush_next_pc;
     vpu::defs::Register memory_reg_index;
     uint32_t memory_reg_value;
 
     //Memory Access
     void stage_memory();
-    bool memory_valid_output;
+    bool memory_valid_output = false;
+    vpu::defs::Opcode writeback_opcode;
     vpu::defs::Register writeback_reg_index;
     uint32_t writeback_reg_value;
 
     //Writeback
     void stage_writeback();
-    bool writeback_valid = false;
+    bool writeback_valid_output = false;
+    vpu::defs::Opcode done_opcode;
     vpu::defs::Register writeback_commit_reg_index;
     uint32_t writeback_commit_reg_value;
     void stage_writeback_commit();
+    /* End stages */    
+
+    //Status printing
+    std::string pipeline_string();
+    std::string pipeline_heading();
+    std::string trace_string();
 
 public:
     ManagerCore(vpu::config::Config& config, std::unique_ptr<vpu::mem::Memory>& memory) ;
     void run_cycle();
     bool check_has_halted();
-    void print_trace(uint32_t cycle=0);
+    void print_status_start();
+    void print_status(uint32_t cycle=0);
 };
 
 }

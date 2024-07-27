@@ -34,6 +34,7 @@ struct Config {
 
     fs::path input_file;
     bool dump = false;
+    bool pipeline = false;
     bool trace = false;
     bool step = false;
     std::string dump_regs = "";
