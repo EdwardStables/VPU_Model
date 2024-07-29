@@ -1,7 +1,8 @@
 #pragma once
 #include <array>
 #include <memory>
-#include <optional>
+#include <deque>
+#include <tuple>
 
 #include "config.h"
 #include "memory.h"
@@ -18,11 +19,13 @@ public:
 
 class ManagerCore {
     friend ManagerCoreSnooper;
+    uint32_t core_cycle_count = 0; //used for internal tracking for stage input scheduling
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> registers;
     vpu::config::Config& config;
     std::unique_ptr<vpu::mem::Memory>& memory;
     std::array<bool,vpu::defs::FLAG_COUNT> flags;
     bool has_halted;
+    uint32_t next_cycle();
     void update_pc(uint32_t new_pc);
     void set_flag(vpu::defs::Flag flag);
     void unset_flag(vpu::defs::Flag flag);
@@ -33,19 +36,12 @@ class ManagerCore {
     /* Stages */
     //Instruction Fetch
     void stage_fetch();
-    bool fetch_valid_output = false;
     bool fetch_seen_hlt = false;
-    uint32_t decode_instruction;
-    uint32_t decode_next_pc;
     
     //Instruction Decode
+    //cycle,instruction,nextpc
+    std::deque<std::tuple<uint32_t,uint32_t,uint32_t>> decode_input_queue;
     void stage_decode();
-    bool decode_valid_output = false;
-    vpu::defs::Opcode execute_opcode;
-    vpu::defs::Register execute_dest;
-    uint32_t execute_source0;
-    uint32_t execute_source1;
-    uint32_t execute_next_pc;
 
     //probably only 2 entries ever needed, but all keeps it simpler for now
     //TODO: this will be cleared when the same entry reaches writeback commit 
@@ -54,28 +50,40 @@ class ManagerCore {
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> execute_feedback_reg_value;
 
     //Execution
+    //cycle,opcode,dest,source0,source1,nextpc
+    std::deque<std::tuple<
+        uint32_t, //cycle
+        vpu::defs::Opcode, //opcode
+        vpu::defs::Register, //dest
+        uint32_t, //source0
+        uint32_t, //source1
+        uint32_t  //next pc
+    >> execute_input_queue;
     void stage_execute();
-    bool execute_valid_output = false;
-    bool flush_set = false; 
-    vpu::defs::Opcode memory_opcode;
-    uint32_t flush_next_pc;
-    vpu::defs::Register memory_reg_index;
-    uint32_t memory_reg_value;
+    std::deque<std::pair<uint32_t,uint32_t>> flush_queue;
 
     //Memory Access
+    std::deque<std::tuple<
+        uint32_t, //cycle
+        vpu::defs::Opcode, //opcode
+        vpu::defs::Register, //Dest
+        uint32_t //value
+        //TODO flags
+    >> memory_input_queue;
     void stage_memory();
-    bool memory_valid_output = false;
-    vpu::defs::Opcode writeback_opcode;
-    vpu::defs::Register writeback_reg_index;
-    uint32_t writeback_reg_value;
 
     //Writeback
+    //Memory Access
+    std::deque<std::tuple<
+        uint32_t, //cycle
+        vpu::defs::Opcode, //opcode
+        vpu::defs::Register, //Dest
+        uint32_t //value
+        //TODO flags
+    >> writeback_input_queue;
     void stage_writeback();
-    bool writeback_valid_output = false;
-    vpu::defs::Opcode done_opcode;
-    vpu::defs::Register writeback_commit_reg_index;
-    uint32_t writeback_commit_reg_value;
-    void stage_writeback_commit();
+    bool writeback_valid = false;
+    vpu::defs::Opcode writeback_opcode;
     /* End stages */    
 
     //Status printing
