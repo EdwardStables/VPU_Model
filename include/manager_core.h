@@ -66,6 +66,7 @@ class ManagerCore {
     std::deque<std::tuple<
         uint32_t, //cycle
         vpu::defs::Opcode, //opcode
+        bool, //write
         vpu::defs::Register, //Dest
         uint32_t //value
         //TODO flags
@@ -77,6 +78,7 @@ class ManagerCore {
     std::deque<std::tuple<
         uint32_t, //cycle
         vpu::defs::Opcode, //opcode
+        bool, //write
         vpu::defs::Register, //Dest
         uint32_t //value
         //TODO flags

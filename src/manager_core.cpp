@@ -162,17 +162,11 @@ void ManagerCore::stage_decode() {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-            reg_index = vpu::defs::get_register(instruction,0);
-            execute_source0 = execute_feedback_reg_held[reg_index] ?
-                                    execute_feedback_reg_value[reg_index] :
-                                    registers[reg_index];
+            execute_source0 = (uint32_t)vpu::defs::get_register(instruction,0);
             break;
         case vpu::defs::CMP_R_R:
         case vpu::defs::MOV_R_R:
-            reg_index = vpu::defs::get_register(instruction,1);
-            execute_source0 = execute_feedback_reg_held[reg_index] ?
-                                    execute_feedback_reg_value[reg_index] :
-                                    registers[reg_index];
+            execute_source0 = (uint32_t)vpu::defs::get_register(instruction,1);
             break;
         //Label
         case vpu::defs::JMP_L:
@@ -204,16 +198,10 @@ void ManagerCore::stage_decode() {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-            reg_index = vpu::defs::ACC;
-            execute_source1 = execute_feedback_reg_held[reg_index] ?
-                                    execute_feedback_reg_value[reg_index] :
-                                    registers[reg_index];
+            execute_source1 = (uint32_t)vpu::defs::ACC;
             break;
         case vpu::defs::CMP_R_R:
-            reg_index = vpu::defs::get_register(instruction,0);
-            execute_source1 = execute_feedback_reg_held[reg_index] ?
-                                    execute_feedback_reg_value[reg_index] :
-                                    registers[reg_index];
+            execute_source1 = (uint32_t)vpu::defs::get_register(instruction,0);
             break;
         case vpu::defs::CMP_R:
             execute_source1 = 0;
@@ -246,6 +234,75 @@ void ManagerCore::stage_execute() {
     vpu::defs::Register memory_reg_index = (vpu::defs::Register)0; //indicated PC, which is invalid and will be ignored
     uint32_t memory_reg_value = 0;
     vpu::defs::Opcode memory_opcode = opcode;
+
+    uint32_t source_value0 = 0;
+    uint32_t source_value1 = 0;    
+
+    //source0
+    switch(opcode) {
+        //Nothing
+        case vpu::defs::NOP:
+        case vpu::defs::HLT:
+            break;
+        //Immediate 24-bit
+        case vpu::defs::MOV_I24:
+        case vpu::defs::ADD_I24:
+        case vpu::defs::ASR_I24:
+        case vpu::defs::LSR_I24:
+        case vpu::defs::LSL_I24:
+        case vpu::defs::MOV_R_I16:
+        case vpu::defs::JMP_L:
+        case vpu::defs::BRA_L:
+            source_value0 = source0;
+            break;
+        case vpu::defs::CMP_R:
+        case vpu::defs::ASR_R:
+        case vpu::defs::LSR_R:
+        case vpu::defs::LSL_R:
+        case vpu::defs::CMP_R_R:
+        case vpu::defs::MOV_R_R:
+            source_value0 = execute_feedback_reg_held[source0] ?
+                                    execute_feedback_reg_value[source0] :
+                                    registers[source0];
+            break;
+        default:
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
+            std::cerr << " at address " << std::hex << PC();
+            std::cerr << " source operand" << std::endl;
+            assert(false);
+    }
+    //source1
+    switch(opcode) {
+        //Nothing
+        case vpu::defs::NOP:
+        case vpu::defs::HLT:
+        case vpu::defs::MOV_I24:
+        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_R_R:
+        case vpu::defs::JMP_L:
+        case vpu::defs::BRA_L:
+        case vpu::defs::CMP_R:
+            source_value1 = source1;
+            break;
+        //applied to ACC
+        case vpu::defs::ADD_I24:
+        case vpu::defs::ASR_I24:
+        case vpu::defs::LSR_I24:
+        case vpu::defs::LSL_I24:
+        case vpu::defs::ASR_R:
+        case vpu::defs::LSR_R:
+        case vpu::defs::LSL_R:
+        case vpu::defs::CMP_R_R:
+            source_value1 = execute_feedback_reg_held[source1] ?
+                                    execute_feedback_reg_value[source1] :
+                                    registers[source1];
+            break;
+        default:
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
+            std::cerr << " at address " << std::hex << PC();
+            std::cerr << " source operand" << std::endl;
+            assert(false);
+    }
     
     bool check_flush = false;
     uint32_t memory_next_pc = next_pc;
@@ -260,49 +317,49 @@ void ManagerCore::stage_execute() {
         case vpu::defs::MOV_R_R:
         case vpu::defs::MOV_I24:
             memory_reg_index = dest;
-            memory_reg_value = source0;
+            memory_reg_value = source_value0;
             break;
         case vpu::defs::ADD_I24:
             memory_reg_index = dest;
-            memory_reg_value = source0 + source1;
+            memory_reg_value = source_value0 + source_value1;
             break;
         case vpu::defs::CMP_R:
         case vpu::defs::CMP_R_R:
             //TODO does this need pipelining and going via writeback?
-            if (source0 == source1)
+            if (source_value0 == source_value1)
                 set_flag(vpu::defs::C);
             else
                 unset_flag(vpu::defs::C);
             break;
         case vpu::defs::ASR_I24:
         case vpu::defs::ASR_R:
-            signed_temp = (int32_t)source1;
-            signed_temp >>= source0;
+            signed_temp = (int32_t)source_value1;
+            signed_temp >>= source_value0;
             memory_reg_index = dest;
             memory_reg_value = signed_temp;
             break;
         case vpu::defs::LSR_I24:
         case vpu::defs::LSR_R:
-            unsigned_temp = (int32_t)source1;
-            unsigned_temp >>= source0;
+            unsigned_temp = (int32_t)source_value1;
+            unsigned_temp >>= source_value0;
             memory_reg_index = dest;
             memory_reg_value = unsigned_temp;
             break;
         case vpu::defs::LSL_R:
         case vpu::defs::LSL_I24:
-            unsigned_temp = (int32_t)source1;
-            unsigned_temp <<= source0;
+            unsigned_temp = (int32_t)source_value1;
+            unsigned_temp <<= source_value0;
             memory_reg_index = dest;
             memory_reg_value = unsigned_temp;
             break;
         case vpu::defs::BRA_L:
             check_flush = true;
             if (get_flag(vpu::defs::C))
-                next_pc = source0;
+                next_pc = source_value0;
             break;
         case vpu::defs::JMP_L:
             check_flush = true;
-            next_pc = source0;
+            next_pc = source_value0;
             break;
         default:
             std::cerr << "Error on opcode " << vpu::defs::opcode_to_string(opcode);
@@ -324,6 +381,7 @@ void ManagerCore::stage_execute() {
         {
             next_cycle(),
             memory_opcode,
+            memory_reg_index != 0,
             memory_reg_index,
             memory_reg_value
         }
@@ -335,13 +393,14 @@ void ManagerCore::stage_memory() {
 
     if (memory_input_queue.empty() || core_cycle_count < std::get<0>(memory_input_queue.front())) return;
 
-    auto [target_cycle, opcode, index, value] = memory_input_queue.front();
+    auto [target_cycle, opcode, write, index, value] = memory_input_queue.front();
     memory_input_queue.pop_front();
     assert(target_cycle == core_cycle_count);
 
     writeback_input_queue.push_back({
         next_cycle(),
         opcode,
+        write,
         index,
         value
     });
@@ -353,7 +412,7 @@ void ManagerCore::stage_writeback() {
         return;
     }
 
-    auto [target_cycle, opcode, index, value] = writeback_input_queue.front();
+    auto [target_cycle, opcode, write, index, value] = writeback_input_queue.front();
     writeback_input_queue.pop_front();
     assert(target_cycle == core_cycle_count);
 
@@ -363,7 +422,8 @@ void ManagerCore::stage_writeback() {
     if (opcode == vpu::defs::HLT)    
         has_halted = true;
 
-    registers[index] = value;
+    if (write)
+        registers[index] = value;
     if (execute_feedback_reg_value[index] == value) {
         execute_feedback_reg_held[index] = false;
     }
