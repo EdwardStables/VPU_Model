@@ -40,31 +40,35 @@ void ManagerCore::run_cycle() {
 }
 
 void ManagerCore::stage_fetch() {
+    //When we've hit a HLT and have not seen a flush then do not dispatch more instructions
     if (!flush_set && fetch_seen_hlt){
         fetch_valid_output = false;
         return;
     }
+    
+    //Handle flushing
+    assert(!fetch_seen_hlt || flush_set);
     fetch_seen_hlt = false;
 
     //TODO: icache and stalling
+    uint32_t pc = flush_set ? flush_next_pc : PC();
     fetch_valid_output = true;
-    decode_instruction = memory->read(PC());
-    
+    decode_instruction = memory->read(pc);
+
     //Don't increment PC or end output for segment end.
     if (vpu::defs::get_opcode(decode_instruction) == vpu::defs::HLT){
         fetch_seen_hlt = true;
         return;
     }
 
-    uint32_t next_pc = flush_set ? flush_next_pc : PC() + 4;
-    update_pc(next_pc);
+    update_pc(pc+4);
 
     //Halt after fetch to retain correct final PC on HLT flush
     if (has_halted){
         fetch_valid_output = false;
         return;
     }
-    decode_next_pc = next_pc;
+    decode_next_pc = PC();
 }
 
 void ManagerCore::stage_decode() {
