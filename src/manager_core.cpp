@@ -50,7 +50,6 @@ void ManagerCore::stage_fetch() {
     fetch_seen_hlt = false;
     
     uint32_t pc = PC();
-    
     //Don't pop flush queue because decode stage still needs to read it
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
@@ -85,9 +84,6 @@ void ManagerCore::stage_decode() {
 
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
-        //In case we had no valid input for previous flush cycle
-        if (core_cycle_count >= flush_cycle)
-            flush_queue.pop_front();
         //Only skip if the cycle matches exactly
         if (core_cycle_count == flush_cycle)
             return;
@@ -237,6 +233,16 @@ void ManagerCore::stage_execute() {
 
     uint32_t source_value0 = 0;
     uint32_t source_value1 = 0;    
+
+    if (!flush_queue.empty()){
+        auto [flush_cycle,flush_next_pc] = flush_queue.front();
+        //In case we had no valid input for previous flush cycle
+        if (core_cycle_count >= flush_cycle)
+            flush_queue.pop_front();
+        //Only skip if the cycle matches exactly
+        if (core_cycle_count == flush_cycle)
+            return;
+    }
 
     //source0
     switch(opcode) {
