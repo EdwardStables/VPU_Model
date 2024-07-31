@@ -24,6 +24,8 @@ class ManagerCore {
     vpu::config::Config& config;
     std::unique_ptr<vpu::mem::Memory>& memory;
     std::array<bool,vpu::defs::FLAG_COUNT> flags;
+    std::array<bool,vpu::defs::BHT_SIZE> bht;
+    std::array<uint32_t,vpu::defs::BTB_SIZE> btb;
     bool has_halted;
     uint32_t next_cycle();
     void update_pc(uint32_t new_pc);
@@ -39,8 +41,8 @@ class ManagerCore {
     bool fetch_seen_hlt = false;
     
     //Instruction Decode
-    //cycle,instruction,nextpc
-    std::deque<std::tuple<uint32_t,uint32_t,uint32_t>> decode_input_queue;
+    //cycle,instruction,pc,nextpc
+    std::deque<std::tuple<uint32_t,uint32_t,uint32_t,uint32_t>> decode_input_queue;
     void stage_decode();
 
     //probably only 2 entries ever needed, but all keeps it simpler for now
@@ -57,6 +59,7 @@ class ManagerCore {
         vpu::defs::Register, //dest
         uint32_t, //source0
         uint32_t, //source1
+        uint32_t, //pc
         uint32_t  //next pc
     >> execute_input_queue;
     void stage_execute();

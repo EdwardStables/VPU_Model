@@ -20,6 +20,8 @@ ManagerCore::ManagerCore(
 {
     registers.fill(0);
     flags.fill(0);
+    btb.fill(0xDEADBEEF);
+    bht.fill(false);
 }
 
 uint32_t ManagerCore::next_cycle() {
@@ -50,6 +52,7 @@ void ManagerCore::stage_fetch() {
     fetch_seen_hlt = false;
     
     uint32_t pc = PC();
+    uint32_t next_pc;
     //Don't pop flush queue because decode stage still needs to read it
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
@@ -68,17 +71,27 @@ void ManagerCore::stage_fetch() {
     //Don't increment PC or end output for segment end.
     if (vpu::defs::get_opcode(decode_instruction) == vpu::defs::HLT){
         fetch_seen_hlt = true;
+        //flush pc change needs to be propagated to the register
+        update_pc(pc);
     } else {
-        update_pc(pc+4);
+        uint32_t bht_tag = vpu::defs::get_bht_tag(pc);
+        if (bht[bht_tag]) {
+            uint32_t btb_tag = vpu::defs::get_btb_tag(pc);
+            next_pc = btb[btb_tag];
+            assert(bht_tag != 0xDEADBEEF);
+        } else {
+            next_pc = pc + 4;
+        }
+        update_pc(next_pc);
     }
 
-    decode_input_queue.push_back({next_cycle(),decode_instruction,PC()});
+    decode_input_queue.push_back({next_cycle(),decode_instruction,pc,PC()});
 }
 
 void ManagerCore::stage_decode() {
     if (decode_input_queue.empty() || core_cycle_count < std::get<0>(decode_input_queue.front())) return;
 
-    auto [target_cycle,instruction,next_pc] = decode_input_queue.front();
+    auto [target_cycle,instruction,pc,next_pc] = decode_input_queue.front();
     decode_input_queue.pop_front();
     assert(target_cycle == core_cycle_count);
 
@@ -95,8 +108,6 @@ void ManagerCore::stage_decode() {
     }
 
     //If above not triggered then the output must be valid
-    
-    uint32_t execute_next_pc = next_pc;
     auto execute_opcode = vpu::defs::get_opcode(instruction);
     uint8_t reg_index;
 
@@ -215,7 +226,8 @@ void ManagerCore::stage_decode() {
             execute_dest,
             execute_source0,
             execute_source1,
-            execute_next_pc
+            pc,
+            next_pc
         }
     );
 }
@@ -223,7 +235,7 @@ void ManagerCore::stage_decode() {
 void ManagerCore::stage_execute() {
     if (execute_input_queue.empty() || core_cycle_count < std::get<0>(execute_input_queue.front())) return;
 
-    auto [target_cycle, opcode, dest, source0, source1, next_pc] = execute_input_queue.front();
+    auto [target_cycle, opcode, dest, source0, source1, pc, next_pc] = execute_input_queue.front();
     execute_input_queue.pop_front();
     assert(target_cycle == core_cycle_count);
 
@@ -311,8 +323,7 @@ void ManagerCore::stage_execute() {
     }
     
     bool check_flush = false;
-    uint32_t memory_next_pc = next_pc;
-
+    uint32_t memory_next_pc;
     uint32_t unsigned_temp;
     int32_t signed_temp;
     switch(opcode) {
@@ -361,11 +372,13 @@ void ManagerCore::stage_execute() {
         case vpu::defs::BRA_L:
             check_flush = true;
             if (get_flag(vpu::defs::C))
-                next_pc = source_value0;
+                memory_next_pc = source_value0;
+            else
+                memory_next_pc = next_pc;
             break;
         case vpu::defs::JMP_L:
             check_flush = true;
-            next_pc = source_value0;
+            memory_next_pc = source_value0;
             break;
         default:
             std::cerr << "Error on opcode " << vpu::defs::opcode_to_string(opcode);
@@ -379,8 +392,26 @@ void ManagerCore::stage_execute() {
         execute_feedback_reg_value[(size_t)memory_reg_index] = memory_reg_value;
     }
 
-    if (check_flush && (next_pc != memory_next_pc)){
-        flush_queue.push_back({next_cycle(),next_pc});
+    if (check_flush) {
+        //branch pred miss
+        if (next_pc != memory_next_pc){
+            //missed on fallthrough
+            if (next_pc == pc + 4){
+                bht[vpu::defs::get_bht_tag(pc)] = true; //look up the actual destination in the btb
+                btb[vpu::defs::get_btb_tag(pc)] = memory_next_pc;
+            }
+            
+            //Must flush to resolve the misprediction
+            flush_queue.push_back({next_cycle(),memory_next_pc});
+        } 
+        
+        //branch pred hit 
+        else {
+            //fallthrough
+            if (next_pc == pc + 4){
+                bht[vpu::defs::get_bht_tag(pc)] = false; //let it carry on
+            }
+        }
     }
 
     memory_input_queue.push_back(
