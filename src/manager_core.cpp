@@ -12,10 +12,12 @@ uint32_t ManagerCoreSnooper::get_register(ManagerCore& core, vpu::defs::Register
 
 ManagerCore::ManagerCore(
     vpu::config::Config& config,
-    std::unique_ptr<vpu::mem::Memory>& memory
+    std::unique_ptr<vpu::mem::Memory>& memory,
+    Scheduler& scheduler
 ) :
     config(config),
     memory(memory),
+    scheduler(scheduler),
     has_halted(false)
 {
     registers.fill(0);
@@ -135,6 +137,16 @@ void ManagerCore::stage_decode() {
         case vpu::defs::MOV_R_R:
             execute_dest = vpu::defs::get_register(instruction,0);
             break;
+        
+        //Pipes
+        //Nothing
+        case vpu::defs::P_SCH_FNC:
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
+        case vpu::defs::P_DMA_CPY:
+            break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
             std::cerr << " at address " << std::hex << PC();
@@ -174,6 +186,18 @@ void ManagerCore::stage_decode() {
         case vpu::defs::BRA_L:
             execute_source0 = vpu::defs::get_label(instruction);
             break;
+        //Pipes
+        //Nothing
+        case vpu::defs::P_SCH_FNC:
+        case vpu::defs::P_DMA_CPY:
+            break;
+        //Register source
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
+            execute_source0 = (uint32_t)vpu::defs::get_register(instruction,0);
+            break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
             std::cerr << " at address " << std::hex << PC();
@@ -206,6 +230,14 @@ void ManagerCore::stage_decode() {
             break;
         case vpu::defs::CMP_R:
             execute_source1 = 0;
+        //Pipes
+        case vpu::defs::P_SCH_FNC:
+        case vpu::defs::P_DMA_CPY:
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
+            break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
             std::cerr << " at address " << std::hex << PC();
@@ -277,6 +309,20 @@ void ManagerCore::stage_execute() {
                                     execute_feedback_reg_value[source0] :
                                     registers[source0];
             break;
+        //Pipes
+        //Nothing
+        case vpu::defs::P_SCH_FNC:
+        case vpu::defs::P_DMA_CPY:
+            break;
+        //Register
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
+            source_value0 = execute_feedback_reg_held[source0] ?
+                                    execute_feedback_reg_value[source0] :
+                                    registers[source0];
+            break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " at address " << std::hex << PC();
@@ -308,6 +354,14 @@ void ManagerCore::stage_execute() {
             source_value1 = execute_feedback_reg_held[source1] ?
                                     execute_feedback_reg_value[source1] :
                                     registers[source1];
+            break;
+        //Pipes
+        case vpu::defs::P_SCH_FNC:
+        case vpu::defs::P_DMA_CPY:
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(opcode);
@@ -373,6 +427,14 @@ void ManagerCore::stage_execute() {
         case vpu::defs::JMP_L:
             check_flush = true;
             memory_next_pc = source_value0;
+            break;
+        case vpu::defs::P_SCH_FNC:
+
+        case vpu::defs::P_DMA_CPY:
+        case vpu::defs::P_DMA_DST_R:
+        case vpu::defs::P_DMA_SRC_R:
+        case vpu::defs::P_DMA_LEN_R:
+        case vpu::defs::P_DMA_SET_R:
             break;
         default:
             std::cerr << "Error on opcode " << vpu::defs::opcode_to_string(opcode);

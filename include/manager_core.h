@@ -7,6 +7,7 @@
 #include "config.h"
 #include "memory.h"
 #include "defs_pkg.h"
+#include "scheduler.h"
 
 namespace vpu {
 
@@ -32,6 +33,7 @@ class ManagerCore {
     bool get_flag(vpu::defs::Flag flag);
     uint32_t PC();
 
+    Scheduler& scheduler;
 
     /* Stages */
     //Instruction Fetch
@@ -95,7 +97,11 @@ class ManagerCore {
     std::string trace_string();
 
 public:
-    ManagerCore(vpu::config::Config& config, std::unique_ptr<vpu::mem::Memory>& memory) ;
+    ManagerCore(
+        vpu::config::Config& config,
+        std::unique_ptr<vpu::mem::Memory>& memory,
+        Scheduler& scheduler
+    );
     void run_cycle();
     bool check_has_halted();
     void print_status_start();
