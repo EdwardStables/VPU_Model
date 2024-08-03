@@ -1,3 +1,10 @@
 #pragma once
 
-class Blitter {};
+namespace vpu {
+
+class Blitter {
+public:
+    void run_cycle();
+};
+
+}

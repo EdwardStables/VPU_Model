@@ -51,12 +51,19 @@ class System {
         }
     }
 
+    void run_cycle() {
+        core.run_cycle();
+        scheduler.run_cycle();
+        dma.run_cycle();
+        blitter.run_cycle();
+    }
+
 public:
     void run_program() {
         uint32_t step_count = 1;
         core.print_status_start();
         while (!core.check_has_halted()) {
-            core.run_cycle();
+            run_cycle();
             vpu::defs::increment_global_cycle();
 
             if (step_count > 0) step_count--;

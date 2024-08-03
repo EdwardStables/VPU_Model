@@ -12,4 +12,8 @@ bool DMA::submit(DMA::Command command, std::function<void()> completion_callback
     return false;
 }
 
+void DMA::run_cycle(){
+
+}
+
 }

@@ -24,6 +24,7 @@ public:
     };
     bool submit(Command command, std::function<void()> completion_callback);
     DMA(std::unique_ptr<vpu::mem::Memory>& memory);
+    void run_cycle();
 };
 
 }

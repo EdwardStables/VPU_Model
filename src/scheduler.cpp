@@ -61,4 +61,8 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
     return false;
 }
 
+void Scheduler::run_cycle() {
+
+}
+
 }
