@@ -4,7 +4,7 @@
 
 #include "manager_core.h"
 
-namespace vpu::core {
+namespace vpu {
 
 uint32_t ManagerCoreSnooper::get_register(ManagerCore& core, vpu::defs::Register reg) {
     return core.registers[reg];

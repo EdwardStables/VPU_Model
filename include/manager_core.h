@@ -8,7 +8,7 @@
 #include "memory.h"
 #include "defs_pkg.h"
 
-namespace vpu::core {
+namespace vpu {
 
 class ManagerCore;
 class ManagerCoreSnooper {

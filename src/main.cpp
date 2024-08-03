@@ -22,7 +22,7 @@ void dump_program(std::unique_ptr<vpu::mem::Memory>& memory){
     }
 }
 
-void dump_regs(vpu::config::Config& config, vpu::core::ManagerCore& core) {
+void dump_regs(vpu::config::Config& config, vpu::ManagerCore& core) {
     fs::path dump_path = config.dump_regs;
     if (fs::exists(dump_path) && fs::is_directory(dump_path)) {
         std::cerr << "Error: Dump path " << config.dump_regs << " is a directory. Give a file name.";
@@ -33,12 +33,12 @@ void dump_regs(vpu::config::Config& config, vpu::core::ManagerCore& core) {
     std::ofstream dump(dump_path, std::ios::out);
     for (uint8_t r = 0; r < vpu::defs::REGISTER_COUNT; r++) {
         dump << vpu::defs::register_to_string((vpu::defs::Register)r) << " ";
-        dump << vpu::core::ManagerCoreSnooper::get_register(core,(vpu::defs::Register)r);
+        dump << vpu::ManagerCoreSnooper::get_register(core,(vpu::defs::Register)r);
         dump << "\n";
     }
 }
 
-void run_program(vpu::core::ManagerCore& core, vpu::config::Config& config) {
+void run_program(vpu::ManagerCore& core, vpu::config::Config& config) {
     uint32_t cycle = 0;    
     uint32_t step_count = 1;
     core.print_status_start();
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         exit(0);
     }
 
-    vpu::core::ManagerCore core(config, memory);
+    vpu::ManagerCore core(config, memory);
     run_program(core, config);
 
     if (config.dump_regs != "") {
