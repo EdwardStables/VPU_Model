@@ -5,6 +5,8 @@
 #include "defs_pkg.h"
 #include "memory.h"
 
+namespace vpu {
+
 class DMA {
     std::unique_ptr<vpu::mem::Memory>& memory;
 public:
@@ -23,3 +25,5 @@ public:
     bool submit(Command command, std::function<void()> completion_callback);
     DMA(std::unique_ptr<vpu::mem::Memory>& memory);
 };
+
+}
