@@ -522,9 +522,9 @@ std::string ManagerCore::pipeline_heading() {
 std::string ManagerCore::pipeline_string() {
     std::string op;    
     std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
-
+    uint32_t cycle = vpu::defs::get_global_cycle();
     op += "| ";
-    if (!decode_input_queue.empty() && std::get<0>(decode_input_queue.front())==vpu::defs::get_global_cycle()) {
+    if (!decode_input_queue.empty() && std::get<0>(decode_input_queue.front())==cycle) {
         auto instr = std::get<1>(decode_input_queue.front());
         if (instr == vpu::defs::SEGMENT_END)
             op += vpu::defs::SEGMENT_END_WIDTH_STRING;
@@ -534,17 +534,17 @@ std::string ManagerCore::pipeline_string() {
         op += na;
     }
     op += " | ";
-    if (!execute_input_queue.empty() && std::get<0>(execute_input_queue.front())==vpu::defs::get_global_cycle())
+    if (!execute_input_queue.empty() && std::get<0>(execute_input_queue.front())==cycle)
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(execute_input_queue.front()));
     else
         op += na;
     op += " | ";
-    if (!memory_input_queue.empty() && std::get<0>(memory_input_queue.front())==vpu::defs::get_global_cycle())
+    if (!memory_input_queue.empty() && std::get<0>(memory_input_queue.front())==cycle)
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(memory_input_queue.front()));
     else
         op += na;
     op += " | ";
-    if (!writeback_input_queue.empty() && std::get<0>(writeback_input_queue.front())==vpu::defs::get_global_cycle())
+    if (!writeback_input_queue.empty() && std::get<0>(writeback_input_queue.front())==cycle)
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(writeback_input_queue.front()));
     else
         op += na;

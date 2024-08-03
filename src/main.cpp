@@ -42,8 +42,8 @@ void run_program(vpu::ManagerCore& core, vpu::config::Config& config) {
     uint32_t step_count = 1;
     core.print_status_start();
     while (!core.check_has_halted()) {
-        vpu::defs::increment_global_cycle();
         core.run_cycle();
+        vpu::defs::increment_global_cycle();
 
         if (step_count > 0) step_count--;
         core.print_status(vpu::defs::get_global_cycle());
