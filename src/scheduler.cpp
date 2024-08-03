@@ -53,23 +53,24 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
             return submit_dma(valid_cycle, opcode, val1, val2);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
-            std::cerr << " No implementation for pipe " << pipe;
+            std::cerr << " No implementation for pipe " << pipe << " ";
             assert(false);
     }
 }
 
 void Scheduler::run_cycle() {
+    //*** DMA ***//
     //Nothing there
     if (!dma_frontend_queue.size()) return;
     //Can't run yet
     if (!dma_frontend_queue.front().can_run()) return;
 
     //DMA can accept data
-    if (dma.submit(dma_frontend_queue.front().data, [](){std::cout << "hi from dma callback" << std::endl;return;})){
+    if (dma.submit(dma_frontend_queue.front().data, [&outstanding = dma_outstanding](){outstanding--;})){
+        dma_outstanding++;
         dma_frontend_queue.pop_front();
         return;
     }
-
     //Otherwise it couldn't accept, need to increment all the valid cycles in the queue
     for (auto& cmd : dma_frontend_queue){
         cmd.increment();

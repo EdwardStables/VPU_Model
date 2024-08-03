@@ -7,6 +7,8 @@
 #include <fstream>
 #include <filesystem>
 
+#include "defs_pkg.h"
+
 namespace vpu::mem {
 
 class Memory;
@@ -25,10 +27,10 @@ class Memory {
     std::array<uint8_t,MEM_SIZE> data;
 public:
     Memory();
-    uint32_t read(uint32_t addr);
-    void write(uint32_t addr, uint32_t data);
-    void copy(uint32_t source, uint32_t dest, uint32_t size);
-    void clear(uint32_t addr, uint32_t size, uint8_t byte=0);
+    uint32_t read_word(uint32_t addr);
+    void write_word(uint32_t addr, uint32_t data);
+    std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> read(uint32_t addr);
+    void write(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> data);
 };
 
 }

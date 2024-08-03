@@ -28,6 +28,10 @@ class Scheduler {
     //Blitter::Frontend blitter_frontend;
 
 
+    //Outstanding request count
+    uint32_t dma_outstanding = 0;
+    uint32_t blit_outstanding = 0;
+
     bool submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
 public:
     Scheduler(

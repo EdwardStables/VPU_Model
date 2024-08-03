@@ -57,7 +57,7 @@ void ManagerCore::stage_fetch() {
         }
     }
 
-    uint32_t decode_instruction = memory->read(pc);
+    uint32_t decode_instruction = memory->read_word(pc);
 
     //Halt after flush to retain correct final PC on HLT flush
     if (has_halted){

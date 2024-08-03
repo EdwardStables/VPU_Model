@@ -26,7 +26,7 @@ class System {
 
     void dump_program(){
         for (int i=0; true; i++) {
-            uint32_t data = memory->read(i*4);
+            uint32_t data = memory->read_word(i*4);
             //Region end marker
             if (data == 0xFFFFFFFF) break;
             vpu::defs::Opcode opcode = vpu::defs::get_opcode(data);

@@ -22,35 +22,34 @@ void MemorySnooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesyste
 }
 
 Memory::Memory() {
-    clear(0, MEM_SIZE);
+    std::fill(data.begin(), data.begin()+MEM_SIZE, 0);
 }
 
-uint32_t Memory::read(uint32_t addr) {
+uint32_t Memory::read_word(uint32_t addr) {
     addr &= 0xFFFFFFFC;
     uint32_t ret = 0;
     for (size_t i = 0; i<4; i++)
         ret |= data[addr+i] << (i*8);
     return ret;
 }
-void Memory::write(uint32_t addr, uint32_t data) {
+void Memory::write_word(uint32_t addr, uint32_t data) {
     addr &= 0xFFFFFFFC;
     for (size_t i = 0; i<4; i++)
         this->data[addr+i] = 0xFF & (data >> 8*i);
 }
 
-void Memory::copy(uint32_t source, uint32_t dest, uint32_t size) {
-    assert(source + size - 1 < MEM_SIZE);
-    assert(dest + size - 1 < MEM_SIZE);
-
-    for (size_t i = 0; i < size; i++){
-        data[dest+i] = data[source+i];
-    }
+std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> Memory::read(uint32_t addr) {
+    assert(addr & 0x3F == 0); //Must be 64-byte aligned
+    assert(addr <= MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't read from beyond the end
+    std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> ret;
+    std::copy(data.begin()+addr,data.begin()+vpu::defs::MEM_ACCESS_WIDTH+1, ret.begin());
+    return ret;
 }
 
-void Memory::clear(uint32_t addr, uint32_t size, uint8_t byte) {
-    assert(addr + size - 1 < MEM_SIZE);
-
-    std::fill(data.begin(), data.begin()+size, byte);
+void Memory::write(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> write_data) {
+    assert(addr & 0x3F == 0); //Must be 64-byte aligned
+    assert(addr <= MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't write beyond the end
+    std::copy(write_data.begin(),write_data.end(), data.begin()+addr);
 }
 
 }
