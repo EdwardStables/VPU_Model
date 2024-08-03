@@ -428,19 +428,13 @@ void ManagerCore::stage_execute() {
             check_flush = true;
             memory_next_pc = source_value0;
             break;
-        case vpu::defs::P_SCH_FNC:
-
-        case vpu::defs::P_DMA_CPY:
-        case vpu::defs::P_DMA_DST_R:
-        case vpu::defs::P_DMA_SRC_R:
-        case vpu::defs::P_DMA_LEN_R:
-        case vpu::defs::P_DMA_SET_R:
-            break;
+        //Pipeline instructions handled in scheduler
         default:
-            std::cerr << "Error on opcode " << vpu::defs::opcode_to_string(opcode);
-            std::cerr << " at address " << std::hex << PC();
-            std::cerr << " during execution" << std::endl;
-            assert(false);
+            assert((uint32_t)opcode >= 128); //pipeline instructions have a different opcode range
+            bool successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), opcode, source_value0, source_value1);
+            
+            //TODO need to handle pipeline stalling when hardware is busy
+            assert(successful_submit);
     }
 
     if (memory_reg_index != (vpu::defs::Register)0){
