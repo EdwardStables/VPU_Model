@@ -40,9 +40,40 @@ class ManagerCore {
     void stage_fetch();
     bool fetch_seen_hlt = false;
     
+    struct DecodeInput {
+        uint32_t instruction;
+        uint32_t pc;
+        uint32_t next_pc;
+    };
+    
+    struct ExecuteInput {
+        vpu::defs::Opcode opcode;
+        vpu::defs::Register dest;
+        uint32_t source0;
+        uint32_t source1;
+        uint32_t pc;
+        uint32_t next_pc;
+    };
+
+    struct MemoryInput {
+        vpu::defs::Opcode opcode;
+        bool write;
+        vpu::defs::Register dest;
+        uint32_t value;
+        //TODO flags
+    };
+
+    struct WritebackInput {
+        vpu::defs::Opcode opcode;
+        bool write;
+        vpu::defs::Register dest;
+        uint32_t value;
+        //TODO flags
+    };
+
     //Instruction Decode
     //cycle,instruction,pc,nextpc
-    std::deque<std::tuple<uint32_t,uint32_t,uint32_t,uint32_t>> decode_input_queue;
+    std::deque<Defer<DecodeInput>> decode_input_queue;
     void stage_decode();
 
     //probably only 2 entries ever needed, but all keeps it simpler for now
@@ -51,41 +82,20 @@ class ManagerCore {
     std::array<bool,vpu::defs::REGISTER_COUNT> execute_feedback_reg_held;
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> execute_feedback_reg_value;
 
+
     //Execution
     //cycle,opcode,dest,source0,source1,nextpc
-    std::deque<std::tuple<
-        uint32_t, //cycle
-        vpu::defs::Opcode, //opcode
-        vpu::defs::Register, //dest
-        uint32_t, //source0
-        uint32_t, //source1
-        uint32_t, //pc
-        uint32_t  //next pc
-    >> execute_input_queue;
+    std::deque<Defer<ExecuteInput>> execute_input_queue;
     void stage_execute();
-    std::deque<std::pair<uint32_t,uint32_t>> flush_queue;
+    std::deque<Defer<uint32_t>> flush_queue;
 
     //Memory Access
-    std::deque<std::tuple<
-        uint32_t, //cycle
-        vpu::defs::Opcode, //opcode
-        bool, //write
-        vpu::defs::Register, //Dest
-        uint32_t //value
-        //TODO flags
-    >> memory_input_queue;
+    std::deque<Defer<MemoryInput>> memory_input_queue;
     void stage_memory();
 
     //Writeback
     //Memory Access
-    std::deque<std::tuple<
-        uint32_t, //cycle
-        vpu::defs::Opcode, //opcode
-        bool, //write
-        vpu::defs::Register, //Dest
-        uint32_t //value
-        //TODO flags
-    >> writeback_input_queue;
+    std::deque<Defer<WritebackInput>> writeback_input_queue;
     void stage_writeback();
     bool writeback_valid = false;
     vpu::defs::Opcode writeback_opcode;

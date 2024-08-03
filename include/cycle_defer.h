@@ -6,13 +6,13 @@ namespace vpu {
 
 template <typename T>
 struct Defer {
-    uint32_t valid_cycle;
+    uint32_t cycle;
     T data;
 
     bool can_run(){
         uint32_t cur = defs::get_global_cycle();
-        assert(valid_cycle >= cur);
-        return valid_cycle == cur;
+        assert(cycle >= cur);
+        return cycle == cur;
     }
 
     void update(uint32_t new_time) {
@@ -20,12 +20,12 @@ struct Defer {
     }
 
     void increment() {
-        valid_cycle++;
+        cycle++;
     }
 
     //Valid next cycle
     Defer(T data) :
-        valid_cycle(defs::get_next_global_cycle()), data(data)
+        cycle(defs::get_next_global_cycle()), data(data)
     {}
 
     Defer(T data, uint32_t valid_cycle) : Defer(data)
