@@ -24,11 +24,6 @@ ManagerCore::ManagerCore(
     bht.fill(false);
 }
 
-uint32_t ManagerCore::next_cycle() {
-    assert(core_cycle_count < 0xFFFFFFFF);
-    return core_cycle_count+1;
-}
-
 void ManagerCore::update_pc(uint32_t new_pc) {
     registers[vpu::defs::PC] = new_pc;
 }
@@ -39,12 +34,11 @@ void ManagerCore::run_cycle() {
     stage_execute();
     stage_memory();
     stage_writeback();
-    core_cycle_count++;
 }
 
 void ManagerCore::stage_fetch() {
     //When we've hit a HLT and have not seen a flush then do not dispatch more instructions
-    if (fetch_seen_hlt && (flush_queue.empty() || core_cycle_count < std::get<0>(flush_queue.front()))){
+    if (fetch_seen_hlt && (flush_queue.empty() || vpu::defs::get_global_cycle() < std::get<0>(flush_queue.front()))){
         return;
     }
     
@@ -56,7 +50,7 @@ void ManagerCore::stage_fetch() {
     //Don't pop flush queue because decode stage still needs to read it
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
-        if (core_cycle_count == flush_cycle){
+        if (vpu::defs::get_global_cycle() == flush_cycle){
             pc = flush_next_pc;
         }
     }
@@ -85,20 +79,20 @@ void ManagerCore::stage_fetch() {
         update_pc(next_pc);
     }
 
-    decode_input_queue.push_back({next_cycle(),decode_instruction,pc,PC()});
+    decode_input_queue.push_back({vpu::defs::get_next_global_cycle(),decode_instruction,pc,PC()});
 }
 
 void ManagerCore::stage_decode() {
-    if (decode_input_queue.empty() || core_cycle_count < std::get<0>(decode_input_queue.front())) return;
+    if (decode_input_queue.empty() || vpu::defs::get_global_cycle() < std::get<0>(decode_input_queue.front())) return;
 
     auto [target_cycle,instruction,pc,next_pc] = decode_input_queue.front();
     decode_input_queue.pop_front();
-    assert(target_cycle == core_cycle_count);
+    assert(target_cycle == vpu::defs::get_global_cycle());
 
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
         //Only skip if the cycle matches exactly
-        if (core_cycle_count == flush_cycle)
+        if (vpu::defs::get_global_cycle() == flush_cycle)
             return;
     }
 
@@ -221,7 +215,7 @@ void ManagerCore::stage_decode() {
 
     execute_input_queue.push_back(
         {
-            next_cycle(),
+            vpu::defs::get_next_global_cycle(),
             execute_opcode,
             execute_dest,
             execute_source0,
@@ -233,11 +227,11 @@ void ManagerCore::stage_decode() {
 }
 
 void ManagerCore::stage_execute() {
-    if (execute_input_queue.empty() || core_cycle_count < std::get<0>(execute_input_queue.front())) return;
+    if (execute_input_queue.empty() || vpu::defs::get_global_cycle() < std::get<0>(execute_input_queue.front())) return;
 
     auto [target_cycle, opcode, dest, source0, source1, pc, next_pc] = execute_input_queue.front();
     execute_input_queue.pop_front();
-    assert(target_cycle == core_cycle_count);
+    assert(target_cycle == vpu::defs::get_global_cycle());
 
     vpu::defs::Register memory_reg_index = (vpu::defs::Register)0; //indicated PC, which is invalid and will be ignored
     uint32_t memory_reg_value = 0;
@@ -249,10 +243,10 @@ void ManagerCore::stage_execute() {
     if (!flush_queue.empty()){
         auto [flush_cycle,flush_next_pc] = flush_queue.front();
         //In case we had no valid input for previous flush cycle
-        if (core_cycle_count >= flush_cycle)
+        if (vpu::defs::get_global_cycle() >= flush_cycle)
             flush_queue.pop_front();
         //Only skip if the cycle matches exactly
-        if (core_cycle_count == flush_cycle)
+        if (vpu::defs::get_global_cycle() == flush_cycle)
             return;
     }
 
@@ -402,7 +396,7 @@ void ManagerCore::stage_execute() {
             }
             
             //Must flush to resolve the misprediction
-            flush_queue.push_back({next_cycle(),memory_next_pc});
+            flush_queue.push_back({vpu::defs::get_next_global_cycle(),memory_next_pc});
         } 
         
         //branch pred hit 
@@ -416,7 +410,7 @@ void ManagerCore::stage_execute() {
 
     memory_input_queue.push_back(
         {
-            next_cycle(),
+            vpu::defs::get_next_global_cycle(),
             memory_opcode,
             memory_reg_index != 0,
             memory_reg_index,
@@ -428,14 +422,14 @@ void ManagerCore::stage_execute() {
 void ManagerCore::stage_memory() {
     //TODO: Implement memory accessing
 
-    if (memory_input_queue.empty() || core_cycle_count < std::get<0>(memory_input_queue.front())) return;
+    if (memory_input_queue.empty() || vpu::defs::get_global_cycle() < std::get<0>(memory_input_queue.front())) return;
 
     auto [target_cycle, opcode, write, index, value] = memory_input_queue.front();
     memory_input_queue.pop_front();
-    assert(target_cycle == core_cycle_count);
+    assert(target_cycle == vpu::defs::get_global_cycle());
 
     writeback_input_queue.push_back({
-        next_cycle(),
+        vpu::defs::get_next_global_cycle(),
         opcode,
         write,
         index,
@@ -444,14 +438,14 @@ void ManagerCore::stage_memory() {
 }
 
 void ManagerCore::stage_writeback() {
-    if (writeback_input_queue.empty() || core_cycle_count < std::get<0>(writeback_input_queue.front())) {
+    if (writeback_input_queue.empty() || vpu::defs::get_global_cycle() < std::get<0>(writeback_input_queue.front())) {
         writeback_valid = false;
         return;
     }
 
     auto [target_cycle, opcode, write, index, value] = writeback_input_queue.front();
     writeback_input_queue.pop_front();
-    assert(target_cycle == core_cycle_count);
+    assert(target_cycle == vpu::defs::get_global_cycle());
 
     writeback_valid = true;
     writeback_opcode = opcode;
@@ -530,7 +524,7 @@ std::string ManagerCore::pipeline_string() {
     std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
 
     op += "| ";
-    if (!decode_input_queue.empty() && std::get<0>(decode_input_queue.front())==core_cycle_count) {
+    if (!decode_input_queue.empty() && std::get<0>(decode_input_queue.front())==vpu::defs::get_global_cycle()) {
         auto instr = std::get<1>(decode_input_queue.front());
         if (instr == vpu::defs::SEGMENT_END)
             op += vpu::defs::SEGMENT_END_WIDTH_STRING;
@@ -540,17 +534,17 @@ std::string ManagerCore::pipeline_string() {
         op += na;
     }
     op += " | ";
-    if (!execute_input_queue.empty() && std::get<0>(execute_input_queue.front())==core_cycle_count)
+    if (!execute_input_queue.empty() && std::get<0>(execute_input_queue.front())==vpu::defs::get_global_cycle())
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(execute_input_queue.front()));
     else
         op += na;
     op += " | ";
-    if (!memory_input_queue.empty() && std::get<0>(memory_input_queue.front())==core_cycle_count)
+    if (!memory_input_queue.empty() && std::get<0>(memory_input_queue.front())==vpu::defs::get_global_cycle())
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(memory_input_queue.front()));
     else
         op += na;
     op += " | ";
-    if (!writeback_input_queue.empty() && std::get<0>(writeback_input_queue.front())==core_cycle_count)
+    if (!writeback_input_queue.empty() && std::get<0>(writeback_input_queue.front())==vpu::defs::get_global_cycle())
         op += vpu::defs::opcode_to_string_fixed(std::get<1>(writeback_input_queue.front()));
     else
         op += na;

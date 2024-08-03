@@ -19,7 +19,6 @@ public:
 
 class ManagerCore {
     friend ManagerCoreSnooper;
-    uint32_t core_cycle_count = 0; //used for internal tracking for stage input scheduling
     std::array<uint32_t,vpu::defs::REGISTER_COUNT> registers;
     vpu::config::Config& config;
     std::unique_ptr<vpu::mem::Memory>& memory;
@@ -27,7 +26,6 @@ class ManagerCore {
     std::array<bool,vpu::defs::BHT_SIZE> bht;
     std::array<uint32_t,vpu::defs::BTB_SIZE> btb;
     bool has_halted;
-    uint32_t next_cycle();
     void update_pc(uint32_t new_pc);
     void set_flag(vpu::defs::Flag flag);
     void unset_flag(vpu::defs::Flag flag);

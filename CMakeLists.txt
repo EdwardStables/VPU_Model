@@ -25,6 +25,9 @@ add_executable(vpu
     src/config.cpp
     src/manager_core.cpp
     src/memory.cpp
+    src/dma.cpp
+    src/scheduler.cpp
+    src/blitter.cpp
     ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
 )
 target_include_directories(
