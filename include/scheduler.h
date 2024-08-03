@@ -33,6 +33,7 @@ class Scheduler {
     uint32_t blit_outstanding = 0;
 
     bool submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
+    bool submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
 public:
     Scheduler(
         DMA& dma,

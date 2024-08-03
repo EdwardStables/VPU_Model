@@ -67,6 +67,7 @@ void DMA::run_cycle() {
         case COPY: copy_cycle(); break;
         case SET : set_cycle(); break;
         default:
+            std::cerr << "Invalid DMA operation ";
             assert(false);
     }
     

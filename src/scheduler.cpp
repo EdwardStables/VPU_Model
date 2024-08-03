@@ -30,7 +30,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
             break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
-            std::cerr << " in DMA pipe." << pipe;
+            std::cerr << " in DMA pipe. ";
             assert(false);
     }
 
@@ -46,11 +46,24 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
     return true;
 }
 
+bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
+    switch(opcode) {
+        case vpu::defs::P_SCH_FNC:
+            return (dma_outstanding==0) && (blit_outstanding==0);
+        default:
+            std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
+            std::cerr << " in sched pipe. ";
+            assert(false);
+    }
+}
+
 bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     vpu::defs::Pipe pipe = vpu::defs::opcode_to_pipe(opcode);
     switch(pipe){
         case vpu::defs::DMA:
             return submit_dma(valid_cycle, opcode, val1, val2);
+        case vpu::defs::SCHED:
+            return submit_sched(valid_cycle, opcode, val1, val2);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " No implementation for pipe " << pipe << " ";
