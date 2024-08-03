@@ -449,7 +449,7 @@ void ManagerCore::stage_execute() {
             }
             
             //Must flush to resolve the misprediction
-            flush_queue.push_back({vpu::defs::get_next_global_cycle(),memory_next_pc});
+            flush_queue.push_back(memory_next_pc);
         } 
         
         //branch pred hit 
