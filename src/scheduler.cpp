@@ -41,7 +41,8 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
     }
 
     //When there is space, copy the frontend into the queue
-    dma_frontend_queue.push_back({vpu::defs::get_next_global_cycle(),core_dma_frontend_state});
+    dma_frontend_queue.push_back(core_dma_frontend_state);
+    core_dma_frontend_state.operation = DMA::NONE;
     return true;
 }
 
@@ -50,18 +51,29 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
     switch(pipe){
         case vpu::defs::DMA:
             return submit_dma(valid_cycle, opcode, val1, val2);
-            break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " No implementation for pipe " << pipe;
             assert(false);
-
     }
-    assert(false);
-    return false;
 }
 
 void Scheduler::run_cycle() {
+    //Nothing there
+    if (!dma_frontend_queue.size()) return;
+    //Can't run yet
+    if (!dma_frontend_queue.front().can_run()) return;
+
+    //DMA can accept data
+    if (dma.submit(dma_frontend_queue.front().data, [](){std::cout << "hi from dma callback" << std::endl;return;})){
+        dma_frontend_queue.pop_front();
+        return;
+    }
+
+    //Otherwise it couldn't accept, need to increment all the valid cycles in the queue
+    for (auto& cmd : dma_frontend_queue){
+        cmd.increment();
+    }
 
 }
 

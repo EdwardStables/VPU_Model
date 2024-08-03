@@ -5,6 +5,7 @@
 #include "dma.h"
 #include "blitter.h"
 #include "defs_pkg.h"
+#include "cycle_defer.h"
 
 namespace vpu {
 
@@ -23,7 +24,7 @@ class Scheduler {
     //Frontends maintain state for setting up commands
     //uint32_t is the earliest time it can be submitted
     DMA::Command core_dma_frontend_state;
-    std::deque<std::tuple<uint32_t,DMA::Command>> dma_frontend_queue;
+    std::deque<Defer<DMA::Command>> dma_frontend_queue;
     //Blitter::Frontend blitter_frontend;
 
 
