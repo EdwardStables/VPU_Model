@@ -42,6 +42,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
 
     //When there is space, copy the frontend into the queue
     dma_frontend_queue.push_back(core_dma_frontend_state);
+    dma_outstanding++;
     core_dma_frontend_state.operation = DMA::NONE;
     return true;
 }
@@ -80,7 +81,6 @@ void Scheduler::run_cycle() {
 
     //DMA can accept data
     if (dma.submit(dma_frontend_queue.front().data, [&outstanding = dma_outstanding](){outstanding--;})){
-        dma_outstanding++;
         dma_frontend_queue.pop_front();
         return;
     }

@@ -56,6 +56,12 @@ void ManagerCore::run_cycle() {
                                          stage_memory();
                                          stage_writeback();
 
+    //Delay run cycle for a stall
+    if (frontend_stall) {
+        for (auto& d : decode_input_queue) d.increment();
+        for (auto& e : execute_input_queue) e.increment();
+    }
+
     //Queue and PC updates happen at the end of the current cycle
     if (!frontend_stall) update_pc();
     if (!frontend_stall && decode_input_queue.size()    && decode_input_queue.front().can_run()   ) decode_input_queue.pop_front();
