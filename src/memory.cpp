@@ -21,6 +21,10 @@ void MemorySnooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesyste
     std::copy(new_data.begin(), new_data.end(), memory->data.begin());
 }
 
+std::array<uint8_t,MEM_SIZE>& MemorySnooper::get_data(std::unique_ptr<Memory>& memory) {
+    return memory->data;
+}
+
 Memory::Memory() {
     std::fill(data.begin(), data.begin()+MEM_SIZE, 0);
 }

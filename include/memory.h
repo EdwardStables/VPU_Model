@@ -11,16 +11,17 @@
 
 namespace vpu::mem {
 
+//512MB
+constexpr uint32_t MEM_SIZE = 512 * 1024 * 1024;
 class Memory;
+
 class MemorySnooper {
 public:
     MemorySnooper() = delete;
     static void copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file);
     static uint8_t get_byte(std::unique_ptr<Memory>& memory, uint32_t index);
+    static std::array<uint8_t,MEM_SIZE>& get_data(std::unique_ptr<Memory>& memory);
 };
-
-//512MB
-constexpr uint32_t MEM_SIZE = 512 * 1024 * 1024;
 
 class Memory {
     friend MemorySnooper;

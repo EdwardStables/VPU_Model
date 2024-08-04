@@ -35,6 +35,19 @@ class System {
         }
     }
 
+    void dump_mem() {
+        fs::path dump_path = config.dump_mem;
+        if (fs::exists(dump_path) && fs::is_directory(dump_path)) {
+            std::cerr << "Error: Dump path " << config.dump_mem << " is a directory. Give a file name.";
+            exit(1);
+        }
+
+        std::cout << "Dumping memory state to " << config.dump_mem << std::endl;
+        std::ofstream dump(dump_path, std::ios::out | std::ios::binary);
+        auto& data = mem::MemorySnooper::get_data(memory);
+        dump.write((char*)&data[0], data.size());
+    }
+
     void dump_regs() {
         fs::path dump_path = config.dump_regs;
         if (fs::exists(dump_path) && fs::is_directory(dump_path)) {
@@ -80,6 +93,10 @@ public:
 
         if (config.dump_regs != "") {
             dump_regs();
+        }
+
+        if (config.dump_mem != "") {
+            dump_mem();
         }
     }
 

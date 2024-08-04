@@ -38,6 +38,7 @@ struct Config {
     bool trace = false;
     bool step = false;
     std::string dump_regs = "";
+    std::string dump_mem = "";
 
     //Check that each item in the config is valid and the combination of them makes sense.
     bool validate();

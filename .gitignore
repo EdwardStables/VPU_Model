@@ -6,3 +6,4 @@ defs
 __pycache__
 test/dumps
 test/binaries
+*.bin
