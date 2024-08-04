@@ -65,6 +65,7 @@ void DMA::run_cycle() {
     if (state == FINISHED){ //Finish on the following cycle
         state = IDLE;
         finished_callback();
+        return; //may want to rework this to avoid a bubble
     }
     
     //Cannot start on first cycle
