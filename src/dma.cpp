@@ -16,6 +16,9 @@ bool DMA::submit(DMA::Command command, std::function<void()> completion_callback
         return false;
     }
     assert(command.operation != NONE);
+    assert(command.dest < vpu::defs::MEM_SIZE);
+    assert(command.dest + command.length < vpu::defs::MEM_SIZE);
+
     state = WORKING; 
     work_cycle = vpu::defs::get_next_global_cycle();
     working_command = command;
