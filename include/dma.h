@@ -28,7 +28,7 @@ private:
         IDLE,
         WORKING,
         FINISHED
-    } state;
+    } state = IDLE;
     uint32_t work_cycle;
     Command working_command;
     std::function<void()> working_callback;

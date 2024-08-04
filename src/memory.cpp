@@ -43,7 +43,7 @@ void Memory::write_word(uint32_t addr, uint32_t data) {
 }
 
 std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> Memory::read(uint32_t addr) {
-    assert(addr & 0x3F == 0); //Must be 64-byte aligned
+    assert((addr & 0x3F) == 0); //Must be 64-byte aligned
     assert(addr <= MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't read from beyond the end
     std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> ret;
     std::copy(data.begin()+addr,data.begin()+vpu::defs::MEM_ACCESS_WIDTH+1, ret.begin());
@@ -51,7 +51,7 @@ std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> Memory::read(uint32_t addr) {
 }
 
 void Memory::write(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> write_data) {
-    assert(addr & 0x3F == 0); //Must be 64-byte aligned
+    assert((addr & 0x3F) == 0); //Must be 64-byte aligned
     assert(addr <= MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't write beyond the end
     std::copy(write_data.begin(),write_data.end(), data.begin()+addr);
 }
