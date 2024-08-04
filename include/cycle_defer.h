@@ -11,7 +11,6 @@ struct Defer {
 
     bool can_run(){
         uint32_t cur = defs::get_global_cycle();
-        assert(cycle >= cur);
         return cycle == cur;
     }
 

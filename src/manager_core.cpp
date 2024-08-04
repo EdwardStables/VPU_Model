@@ -26,21 +26,47 @@ ManagerCore::ManagerCore(
     bht.fill(false);
 }
 
-void ManagerCore::update_pc(uint32_t new_pc) {
-    registers[vpu::defs::PC] = new_pc;
+void ManagerCore::stage_pc(uint32_t new_pc) {
+    potential_next_pc = new_pc;
+}
+
+void ManagerCore::update_pc() {
+    registers[vpu::defs::PC] = potential_next_pc;
 }
 
 void ManagerCore::run_cycle() {
-    stage_fetch();
-    stage_decode();
-    stage_execute();
-    stage_memory();
-    stage_writeback();
+    //Flush always happen
+    uint32_t flush_addr = 0;
+    bool flush_valid = false;
+    if (!flush_queue.empty()){
+        auto flush_cycle = flush_queue.front().cycle;
+        //In case we had no valid input for previous flush cycle
+        if (vpu::defs::get_global_cycle() >= flush_cycle){
+            flush_valid = true;
+            flush_addr = flush_queue.front().data;
+            flush_queue.pop_front();
+        }
+    }
+
+
+    //Stall set by execute, therefore this one applies on the following cycle
+    if (!frontend_stall)                 stage_fetch(flush_valid, flush_addr);
+    if (!frontend_stall && !flush_valid) stage_decode();
+    if (                   !flush_valid) stage_execute();
+                                         stage_memory();
+                                         stage_writeback();
+
+    //Queue and PC updates happen at the end of the current cycle
+    if (!frontend_stall) update_pc();
+    if (!frontend_stall && decode_input_queue.size()    && decode_input_queue.front().can_run()   ) decode_input_queue.pop_front();
+    if (!frontend_stall && execute_input_queue.size()   && execute_input_queue.front().can_run()  ) execute_input_queue.pop_front();
+    if (                   memory_input_queue.size()    && memory_input_queue.front().can_run()   ) memory_input_queue.pop_front();
+    if (                   writeback_input_queue.size() && writeback_input_queue.front().can_run()) writeback_input_queue.pop_front();
 }
 
-void ManagerCore::stage_fetch() {
+void ManagerCore::stage_fetch(bool flush_valid, uint32_t flush_addr) {
     //When we've hit a HLT and have not seen a flush then do not dispatch more instructions
-    if (fetch_seen_hlt && (flush_queue.empty() || !flush_queue.front().can_run())){ 
+    if (fetch_seen_hlt && !flush_valid){ 
         return;
     }
     
@@ -50,11 +76,8 @@ void ManagerCore::stage_fetch() {
     uint32_t pc = PC();
     uint32_t next_pc;
     //Don't pop flush queue because decode stage still needs to read it
-    if (!flush_queue.empty()){
-        auto [flush_cycle,flush_next_pc] = flush_queue.front();
-        if (vpu::defs::get_global_cycle() == flush_cycle){
-            pc = flush_next_pc;
-        }
+    if (flush_valid){
+        pc = flush_addr;
     }
 
     uint32_t decode_instruction = memory->read_word(pc);
@@ -68,7 +91,7 @@ void ManagerCore::stage_fetch() {
     if (vpu::defs::get_opcode(decode_instruction) == vpu::defs::HLT){
         fetch_seen_hlt = true;
         //flush pc change needs to be propagated to the register
-        update_pc(pc);
+        stage_pc(pc);
     } else {
         uint32_t bht_tag = vpu::defs::get_bht_tag(pc);
         if (bht[bht_tag]) {
@@ -78,7 +101,7 @@ void ManagerCore::stage_fetch() {
         } else {
             next_pc = pc + 4;
         }
-        update_pc(next_pc);
+        stage_pc(next_pc);
     }
 
     decode_input_queue.push_back(DecodeInput{decode_instruction,pc,PC()});
@@ -89,13 +112,6 @@ void ManagerCore::stage_decode() {
 
     assert(decode_input_queue.front().cycle == vpu::defs::get_global_cycle());
     auto input = decode_input_queue.front().data;
-    decode_input_queue.pop_front();
-
-    if (!flush_queue.empty()){
-        //Only skip if the cycle matches exactly
-        if (vpu::defs::get_global_cycle() == flush_queue.front().cycle)
-            return;
-    }
 
     if (input.instruction == vpu::defs::SEGMENT_END){
         has_halted = true;
@@ -260,7 +276,6 @@ void ManagerCore::stage_execute() {
 
     auto input = execute_input_queue.front().data;
     assert(execute_input_queue.front().cycle == vpu::defs::get_global_cycle());
-    execute_input_queue.pop_front();
 
     vpu::defs::Register memory_reg_index = (vpu::defs::Register)0; //indicated PC, which is invalid and will be ignored
     uint32_t memory_reg_value = 0;
@@ -268,16 +283,6 @@ void ManagerCore::stage_execute() {
 
     uint32_t source_value0 = 0;
     uint32_t source_value1 = 0;    
-
-    if (!flush_queue.empty()){
-        auto flush_cycle = flush_queue.front().cycle;
-        //In case we had no valid input for previous flush cycle
-        if (vpu::defs::get_global_cycle() >= flush_cycle)
-            flush_queue.pop_front();
-        //Only skip if the cycle matches exactly
-        if (vpu::defs::get_global_cycle() == flush_cycle)
-            return;
-    }
 
     //source0
     switch(input.opcode) {
@@ -368,6 +373,7 @@ void ManagerCore::stage_execute() {
     }
     
     bool check_flush = false;
+    bool successful_submit = true;
     uint32_t memory_next_pc;
     uint32_t unsigned_temp;
     int32_t signed_temp;
@@ -428,11 +434,15 @@ void ManagerCore::stage_execute() {
         //Pipeline instructions handled in scheduler
         default:
             assert((uint32_t)input.opcode >= 128); //pipeline instructions have a different opcode range
-            bool successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), input.opcode, source_value0, source_value1);
-            
-            //TODO need to handle pipeline stalling when hardware is busy
-            assert(successful_submit);
+            successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), input.opcode, source_value0, source_value1);
     }
+
+    //Scheduler stall
+    if (!successful_submit){
+        frontend_stall = true; 
+        return;
+    }
+    frontend_stall = false;
 
     if (memory_reg_index != (vpu::defs::Register)0){
         execute_feedback_reg_held[(size_t)memory_reg_index] = true;
@@ -471,7 +481,6 @@ void ManagerCore::stage_memory() {
 
     assert(memory_input_queue.front().cycle == vpu::defs::get_global_cycle());
     auto input = memory_input_queue.front().data;
-    memory_input_queue.pop_front();
 
     writeback_input_queue.push_back(WritebackInput{input.opcode, input.write, input.dest, input.value});
 }
@@ -484,7 +493,6 @@ void ManagerCore::stage_writeback() {
 
     assert(writeback_input_queue.front().cycle == vpu::defs::get_global_cycle());
     auto input = writeback_input_queue.front().data;
-    writeback_input_queue.pop_front();
 
     writeback_valid = true;
     writeback_opcode = input.opcode;

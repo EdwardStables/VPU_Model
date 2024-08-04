@@ -27,7 +27,10 @@ class ManagerCore {
     std::array<bool,vpu::defs::BHT_SIZE> bht;
     std::array<uint32_t,vpu::defs::BTB_SIZE> btb;
     bool has_halted;
-    void update_pc(uint32_t new_pc);
+    bool frontend_stall = false;
+    uint32_t potential_next_pc;
+    void update_pc();
+    void stage_pc(uint32_t new_pc);
     void set_flag(vpu::defs::Flag flag);
     void unset_flag(vpu::defs::Flag flag);
     bool get_flag(vpu::defs::Flag flag);
@@ -37,7 +40,7 @@ class ManagerCore {
 
     /* Stages */
     //Instruction Fetch
-    void stage_fetch();
+    void stage_fetch(bool flush_valid, uint32_t flush_addr);
     bool fetch_seen_hlt = false;
     
     struct DecodeInput {
