@@ -17,23 +17,34 @@ def isa():
 
 @pytest.fixture
 def run_program(isa, request, clean):
-    prog = request.param
+    prog, regs, mem = request.param
     inp = PROGS / (prog + ".asm")
     bin = BINS / (prog + ".out")
-    dump = DUMP / (prog + ".reg")
+    dump_reg = DUMP / (prog + ".reg")
+    dump_mem = DUMP / (prog + ".mem")
     assert inp.exists()
 
     write_out(Program(inp, isa), Path(bin))
     assert bin.exists()
 
-    proc = run(f"build/vpu {bin} --dump_regs {dump}", timeout=1, shell=True)
+    cmd = f"build/vpu {bin}"
+    if regs:
+        cmd += f" --dump_regs {dump_reg}"
+    if mem:
+        cmd += f" --dump_mem {dump_mem}"
+    proc = run(cmd, timeout=5, shell=True)
+
     assert proc.returncode == 0
-    assert dump.exists()
+    if regs:
+        assert dump_reg.exists()
+    if mem:
+        assert dump_mem.exists()
 
     yield
     if clean:
         Path(bin).unlink()
-        (DUMP/(prog + ".reg")).unlink()
+        dump_reg.unlink(missing_ok=True)
+        dump_mem.unlink(missing_ok=True)
 
 @pytest.fixture
 def actual_registers(request):
@@ -46,6 +57,15 @@ def actual_registers(request):
             v[reg] = int(val)
     regstate = RegState(v['PC'],v['ACC'],v['R1'],v['R2'],v['R3'],v['R4'],v['R5'],v['R6'],v['R7'],v['R8'])
     yield regstate
+
+@pytest.fixture
+def actual_memory(request):
+    prog = request.param
+    dump = DUMP / (prog + ".mem")
+    v = {}
+    with dump.open('rb') as f:
+        data = f.read()
+    yield data
 
 def pytest_addoption(parser):
     parser.addoption("--no_clean", action="store_true")

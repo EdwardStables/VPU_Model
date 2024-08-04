@@ -27,7 +27,7 @@ def expected_registers(request):
 
 @pytest.mark.parametrize(
     "run_program, actual_registers, expected_registers",
-    [(p,p,p) for p in TEST_FILES],
+    [((p,True,False),p,p) for p in TEST_FILES],
     indirect=True
 )
 def test_register_state(run_program,actual_registers,expected_registers):
