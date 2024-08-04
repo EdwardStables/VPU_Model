@@ -40,7 +40,7 @@ class ManagerCore {
 
     /* Stages */
     //Instruction Fetch
-    void stage_fetch(bool flush_valid, uint32_t flush_addr);
+    void stage_fetch(bool frontend_stall, bool flush_valid, uint32_t flush_addr);
     bool fetch_seen_hlt = false;
     
     struct DecodeInput {
@@ -77,7 +77,7 @@ class ManagerCore {
     //Instruction Decode
     //cycle,instruction,pc,nextpc
     std::deque<Defer<DecodeInput>> decode_input_queue;
-    void stage_decode();
+    void stage_decode(bool frontend_stall);
 
     //probably only 2 entries ever needed, but all keeps it simpler for now
     //TODO: this will be cleared when the same entry reaches writeback commit 
@@ -105,6 +105,11 @@ class ManagerCore {
     /* End stages */    
 
     //Status printing
+    std::string status_fetch_opcode;
+    std::string status_decode_opcode;
+    std::string status_execute_opcode;
+    std::string status_memory_opcode;
+    std::string status_writeback_opcode;
     std::string pipeline_string();
     std::string pipeline_heading();
     std::string trace_string();

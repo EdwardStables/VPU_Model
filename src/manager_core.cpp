@@ -48,13 +48,18 @@ void ManagerCore::run_cycle() {
         }
     }
 
+    status_fetch_opcode     = "";
+    status_decode_opcode    = "";
+    status_execute_opcode   = "";
+    status_memory_opcode    = "";
+    status_writeback_opcode = "";
 
     //Stall set by execute, therefore this one applies on the following cycle
-    if (!frontend_stall)                 stage_fetch(flush_valid, flush_addr);
-    if (!frontend_stall && !flush_valid) stage_decode();
-    if (                   !flush_valid) stage_execute();
-                                         stage_memory();
-                                         stage_writeback();
+                      stage_fetch(frontend_stall, flush_valid, flush_addr);
+    if (!flush_valid) stage_decode(frontend_stall);
+    if (!flush_valid) stage_execute();
+                      stage_memory();
+                      stage_writeback();
 
     //Delay run cycle for a stall
     if (frontend_stall) {
@@ -70,7 +75,7 @@ void ManagerCore::run_cycle() {
     if (                   writeback_input_queue.size() && writeback_input_queue.front().can_run()) writeback_input_queue.pop_front();
 }
 
-void ManagerCore::stage_fetch(bool flush_valid, uint32_t flush_addr) {
+void ManagerCore::stage_fetch(bool stall, bool flush_valid, uint32_t flush_addr) {
     //When we've hit a HLT and have not seen a flush then do not dispatch more instructions
     if (fetch_seen_hlt && !flush_valid){ 
         return;
@@ -93,6 +98,11 @@ void ManagerCore::stage_fetch(bool flush_valid, uint32_t flush_addr) {
         return;
     }
 
+    status_fetch_opcode = vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(decode_instruction));
+
+    if (stall)
+        return;
+
     //Don't increment PC or end output for segment end.
     if (vpu::defs::get_opcode(decode_instruction) == vpu::defs::HLT){
         fetch_seen_hlt = true;
@@ -113,7 +123,7 @@ void ManagerCore::stage_fetch(bool flush_valid, uint32_t flush_addr) {
     decode_input_queue.push_back(DecodeInput{decode_instruction,pc,PC()});
 }
 
-void ManagerCore::stage_decode() {
+void ManagerCore::stage_decode(bool stall) {
     if (decode_input_queue.empty() || !decode_input_queue.front().can_run()) return;
 
     assert(decode_input_queue.front().cycle == vpu::defs::get_global_cycle());
@@ -266,15 +276,18 @@ void ManagerCore::stage_decode() {
             assert(false);
     }
 
-    execute_input_queue.push_back(ExecuteInput{
-            execute_opcode,
-            execute_dest,
-            execute_source0,
-            execute_source1,
-            input.pc,
-            input.next_pc
-        }
-    );
+    status_decode_opcode = vpu::defs::opcode_to_string_fixed(execute_opcode);
+    if (!stall) {
+        execute_input_queue.push_back(ExecuteInput{
+                execute_opcode,
+                execute_dest,
+                execute_source0,
+                execute_source1,
+                input.pc,
+                input.next_pc
+            }
+        );
+    }
 }
 
 void ManagerCore::stage_execute() {
@@ -443,6 +456,9 @@ void ManagerCore::stage_execute() {
             successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), input.opcode, source_value0, source_value1);
     }
 
+    //Do before the stall
+    status_execute_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
+
     //Scheduler stall
     if (!successful_submit){
         frontend_stall = true; 
@@ -488,6 +504,7 @@ void ManagerCore::stage_memory() {
     assert(memory_input_queue.front().cycle == vpu::defs::get_global_cycle());
     auto input = memory_input_queue.front().data;
 
+    status_memory_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
     writeback_input_queue.push_back(WritebackInput{input.opcode, input.write, input.dest, input.value});
 }
 
@@ -511,6 +528,7 @@ void ManagerCore::stage_writeback() {
     if (execute_feedback_reg_value[input.dest] == input.value) {
         execute_feedback_reg_held[input.dest] = false;
     }
+    status_writeback_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
 }
 
 void ManagerCore::set_flag(vpu::defs::Flag flag) {
@@ -578,30 +596,13 @@ std::string ManagerCore::pipeline_string() {
     std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
     uint32_t cycle = vpu::defs::get_global_cycle();
     op += "| ";
-    if (!decode_input_queue.empty() && decode_input_queue.front().can_run()) {
-        auto instr = decode_input_queue.front().data.instruction;
-        if (instr == vpu::defs::SEGMENT_END)
-            op += vpu::defs::SEGMENT_END_WIDTH_STRING;
-        else
-            op += vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(instr));
-    } else {
-        op += na;
-    }
+    op += status_fetch_opcode.length() ? status_fetch_opcode : na;
     op += " | ";
-    if (!execute_input_queue.empty() && execute_input_queue.front().can_run())
-        op += vpu::defs::opcode_to_string_fixed(execute_input_queue.front().data.opcode);
-    else
-        op += na;
+    op += status_decode_opcode.length() ? status_decode_opcode : na;
     op += " | ";
-    if (!memory_input_queue.empty() && memory_input_queue.front().can_run())
-        op += vpu::defs::opcode_to_string_fixed(memory_input_queue.front().data.opcode);
-    else
-        op += na;
+    op += status_execute_opcode.length() ? status_execute_opcode : na;
     op += " | ";
-    if (!writeback_input_queue.empty() && writeback_input_queue.front().can_run())
-        op += vpu::defs::opcode_to_string_fixed(writeback_input_queue.front().data.opcode);
-    else
-        op += na;
+    op += status_memory_opcode.length() ? status_memory_opcode : na;
     op += " | ";
     op += writeback_valid ? vpu::defs::opcode_to_string_fixed(writeback_opcode) : na;
     op += " |";
