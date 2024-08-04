@@ -120,7 +120,7 @@ void ManagerCore::stage_fetch(bool stall, bool flush_valid, uint32_t flush_addr)
         stage_pc(next_pc);
     }
 
-    decode_input_queue.push_back(DecodeInput{decode_instruction,pc,PC()});
+    decode_input_queue.push_back(DecodeInput{decode_instruction,pc,potential_next_pc});
 }
 
 void ManagerCore::stage_decode(bool stall) {
