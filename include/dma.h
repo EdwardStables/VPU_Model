@@ -35,8 +35,13 @@ private:
     std::function<void()> finished_callback;
     uint32_t write_pointer;
     uint32_t read_pointer;
-    std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> fetched_data;
-    bool fetched_data_valid = false;
+    bool fetched_writeback_data_valid = false;
+    std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> fetched_writeback_data;
+
+    bool active_buffer_valid = false;
+    uint32_t active_buffer_address = 0;
+    uint32_t active_buffer_size = 0;
+    std::array<uint8_t,2*vpu::defs::MEM_ACCESS_WIDTH> active_buffer;
 
     void copy_cycle();
     void set_cycle();

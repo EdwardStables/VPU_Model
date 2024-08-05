@@ -26,7 +26,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
             core_dma_frontend_state.operation = DMA::SET;
             break;
         case vpu::defs::P_DMA_CPY:
-            core_dma_frontend_state.operation = DMA::SET;
+            core_dma_frontend_state.operation = DMA::COPY;
             break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
