@@ -58,6 +58,16 @@ bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t
     }
 }
 
+void Scheduler::blit_complete() {
+    assert(blit_outstanding > 0);
+    blit_outstanding--;
+}
+
+void Scheduler::dma_complete() {
+    assert(dma_outstanding > 0);
+    dma_outstanding--;
+}
+
 bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     vpu::defs::Pipe pipe = vpu::defs::opcode_to_pipe(opcode);
     switch(pipe){
@@ -80,7 +90,8 @@ void Scheduler::run_cycle() {
     if (!dma_frontend_queue.front().can_run()) return;
 
     //DMA can accept data
-    if (dma.submit(dma_frontend_queue.front().data, [&outstanding = dma_outstanding](){outstanding--;})){
+    std::function<void()> callback = std::bind(&Scheduler::dma_complete, this);
+    if (dma.submit(dma_frontend_queue.front().data, callback)){
         dma_frontend_queue.pop_front();
         return;
     }

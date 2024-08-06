@@ -30,7 +30,9 @@ class Scheduler {
 
     //Outstanding request count
     uint32_t dma_outstanding = 0;
+    void dma_complete();
     uint32_t blit_outstanding = 0;
+    void blit_complete();
 
     bool submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
     bool submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);

@@ -33,6 +33,7 @@ private:
     Command working_command;
     std::function<void()> working_callback;
     std::function<void()> finished_callback;
+    bool finished_callback_valid = false;
     uint32_t write_pointer;
     uint32_t read_pointer;
     bool fetched_writeback_data_valid = false;

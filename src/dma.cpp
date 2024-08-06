@@ -159,10 +159,14 @@ void DMA::set_cycle() {
 }
 
 void DMA::run_cycle() {
+    if (finished_callback_valid) {
+        finished_callback();
+        finished_callback_valid = false;
+    }
+
     if (state == IDLE) return;
     if (state == FINISHED){ //Finish on the following cycle
         state = IDLE;
-        finished_callback();
         return; //may want to rework this to avoid a bubble
     }
     
@@ -179,6 +183,7 @@ void DMA::run_cycle() {
     
     if (state == FINISHED){
         finished_callback = working_callback;
+        finished_callback_valid = true;
     }
 }
 
