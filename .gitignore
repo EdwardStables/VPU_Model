@@ -7,3 +7,5 @@ __pycache__
 test/dumps
 test/binaries
 *.bin
+.cache
+compile_commands.json
