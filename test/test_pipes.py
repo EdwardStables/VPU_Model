@@ -68,7 +68,7 @@ def test_blit_pix(run_program,actual_memory):
                 assert actual_memory[addr+1] == 0xFF
                 assert actual_memory[addr+2] == 0xFF
                 assert actual_memory[addr+3] == 0xFF
-            elif x == 150 and y == 200:
+            elif x == 150 and y == 175:
                 assert actual_memory[addr] == 0xFF
                 assert actual_memory[addr+1] == 0x00
                 assert actual_memory[addr+2] == 0x00
@@ -81,7 +81,7 @@ def test_blit_pix(run_program,actual_memory):
 
 
 @pytest.mark.parametrize("run_program, actual_memory", params("blitter_clear"), indirect=True)
-def test_blit_pix(run_program,actual_memory):
+def test_blit_clear(run_program,actual_memory):
     #Constants that may change with config, currently no easy way to extract them
     FRAMEBUFFER_WIDTH = 300
     FRAMEBUFFER_HEIGHT = 200
