@@ -71,6 +71,11 @@ void Blitter::run_cycle(){
             std::cerr << "Invalid Blitter operation ";
             assert(false);
     }
+
+    if (state == FINISHED) {
+        finished_callback = working_callback;
+        finished_callback_valid = true;
+    }
 }
 
 Blitter::Blitter(std::unique_ptr<vpu::mem::Memory>& memory)

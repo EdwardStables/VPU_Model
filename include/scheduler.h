@@ -25,17 +25,22 @@ class Scheduler {
     //uint32_t is the earliest time it can be submitted
     DMA::Command core_dma_frontend_state;
     std::deque<Defer<DMA::Command>> dma_frontend_queue;
+    Blitter::Command core_blitter_frontend_state;
     std::deque<Defer<Blitter::Command>> blitter_frontend_queue;
 
 
     //Outstanding request count
     uint32_t dma_outstanding = 0;
     void dma_complete();
-    uint32_t blit_outstanding = 0;
-    void blit_complete();
+    uint32_t blitter_outstanding = 0;
+    void blitter_complete();
 
     bool submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
     bool submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
+    bool submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
+
+    void check_dma();
+    void check_blitter();
 public:
     Scheduler(
         DMA& dma,
