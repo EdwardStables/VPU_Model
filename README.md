@@ -22,3 +22,8 @@ To see feedback from the execution you need to set some other options.
 - `--pipeline` will print the instruction in each pipeline stage of the management core
 - `--dump_mem/regs` will dump the entire memory state and end register state in files after completion. Note that the memory file is quite large
 - `--step` will wait after executing each cycle, provide a number to step a specific number of cycles or just press enter to run one
+
+## Tests
+
+Pytest is used for simple tests, ensure pytest is installed and run tests with `pytest`. 
+
