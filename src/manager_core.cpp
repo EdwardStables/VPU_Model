@@ -233,10 +233,8 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_DMA_LEN_R:
         case vpu::defs::P_DMA_SET_R:
         case vpu::defs::P_BLI_COL_R:
-            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
-            break;
         case vpu::defs::P_BLI_PIX_R_R:
-            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,1);
+            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
@@ -281,7 +279,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_CLR:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
-            execute_source1 = (uint32_t)vpu::defs::get_register(input.instruction,0);
+            execute_source1 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);

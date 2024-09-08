@@ -62,7 +62,7 @@ bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t
 bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
         case vpu::defs::P_BLI_COL_R:
-            core_blitter_frontend_state.colour = (val1 << 8) & 0xFF; //Value in RGB, but colours are RGBA
+            core_blitter_frontend_state.colour = (val1 << 8) | 0xFF; //Value in RGB, but colours are RGBA
             return true;
         case vpu::defs::P_BLI_PIX_R_R:
             core_blitter_frontend_state.xpos = val1;
