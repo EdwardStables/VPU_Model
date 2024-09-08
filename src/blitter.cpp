@@ -28,8 +28,10 @@ void Blitter::clear_cycle() {
     std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> data;
     assert(vpu::defs::MEM_ACCESS_WIDTH == 4 * vpu::defs::BLITTER_MAX_PIXELS);
 
-    uint32_t write_addr = next_address();
-    assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+    if (working_command.ypos >= defs::FRAMEBUFFER_HEIGHT) {
+        state = FINISHED;
+        return;
+    }
 
     for (int i = 0; i < defs::BLITTER_MAX_PIXELS; i++) {
         data[4*i]   = working_command.colour >> 24;
@@ -37,7 +39,10 @@ void Blitter::clear_cycle() {
         data[4*i+2] = (working_command.colour >> 8) & 0xFF;
         data[4*i+3] = working_command.colour & 0xFF;
     }
-    memory->write(next_address(), data);
+
+    uint32_t write_addr = next_address();
+    assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+    memory->write(write_addr, data);
 
     //Will overwrite end of buffer, but that should be ok for now
     working_command.xpos += defs::BLITTER_MAX_PIXELS;
@@ -45,8 +50,6 @@ void Blitter::clear_cycle() {
         working_command.xpos -= defs::FRAMEBUFFER_WIDTH;
         working_command.ypos++;
     }
-    if (working_command.ypos >= defs::FRAMEBUFFER_HEIGHT)
-        state = FINISHED;
 }
 
 void Blitter::run_cycle(){
