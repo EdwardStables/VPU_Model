@@ -25,7 +25,7 @@ class Scheduler {
     //uint32_t is the earliest time it can be submitted
     DMA::Command core_dma_frontend_state;
     std::deque<Defer<DMA::Command>> dma_frontend_queue;
-    //Blitter::Frontend blitter_frontend;
+    std::deque<Defer<Blitter::Command>> blitter_frontend_queue;
 
 
     //Outstanding request count

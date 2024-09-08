@@ -104,7 +104,7 @@ public:
         config(config),
         memory(std::make_unique<vpu::mem::Memory>()),
         dma(memory),
-        blitter(),
+        blitter(memory),
         scheduler(dma, blitter),
         core(config, memory, scheduler)
     {
