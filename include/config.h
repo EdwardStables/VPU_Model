@@ -39,6 +39,9 @@ struct Config {
     bool step = false;
     std::string dump_regs = "";
     std::string dump_mem = "";
+#ifdef RPC
+    bool inspector = false;
+#endif
 
     //Check that each item in the config is valid and the combination of them makes sense.
     bool validate();

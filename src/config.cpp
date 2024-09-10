@@ -57,6 +57,9 @@ Config parse_arguments(int argc, char *argv[]) {
 
     std::unordered_map<std::string,Config::OptArg> optional_arguments = {
         {"help",      Config::OptArg::OptBoolean("--help",      "-h", "Print this message")},
+#ifdef RPC
+        {"inspect",   Config::OptArg::OptBoolean("--inspect",   "-i", "Start an RPC server and launch the inspector tool")},
+#endif
         {"dump",      Config::OptArg::OptBoolean("--dump",      "-d", "Dump a human readable copy of the input program")},
         {"pipeline",  Config::OptArg::OptBoolean("--pipeline",  "-p", "Print pipeline state")},
         {"trace",     Config::OptArg::OptBoolean("--trace",     "-t", "Print core state each clock")},
@@ -191,6 +194,7 @@ Config parse_arguments(int argc, char *argv[]) {
     config.step = std::get<bool>(optional_arguments["step"].value);
     config.dump_regs = std::get<std::string>(optional_arguments["dump_regs"].value);
     config.dump_mem = std::get<std::string>(optional_arguments["dump_mem"].value);
+    config.inspector = std::get<bool>(optional_arguments["inspect"].value);
 
     return config;
 }

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <memory>
 #include <iomanip>
+#include <cstdlib>
 
 #include "memory.h"
 #include "config.h"
@@ -120,14 +121,13 @@ public:
         core(config, memory, scheduler)
 #ifdef RPC
         ,server_interface(std::make_unique<rpc::ServerInterface>(memory))
-        ,server_wrapper(server_interface)
+        ,server_wrapper(config.inspector, server_interface)
 #endif
     {
         initialise_memory_state();
 
         if (config.dump) {
             dump_program();
-            exit(0);
         }
     }
 };
@@ -143,6 +143,7 @@ int main(int argc, char *argv[]) {
     }
 
     vpu::System system(config);
+    if (config.dump) return 0;
     system.run_program();
 
     return 0;
