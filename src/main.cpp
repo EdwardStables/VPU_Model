@@ -9,6 +9,10 @@
 #include "scheduler.h"
 #include "dma.h"
 
+#ifdef RPC
+#include "rpc_interface.h"
+#include "simulator_rpc.h"
+#endif
 
 namespace vpu {
 
@@ -19,6 +23,13 @@ class System {
     Blitter blitter;
     ManagerCore core;
     Scheduler scheduler;
+
+    #ifdef RPC
+    std::unique_ptr<SimulatorRPCInterface> server_interface;
+    ServerWrapper server_wrapper; 
+    #endif
+
+
 
     void initialise_memory_state() {
         vpu::mem::MemorySnooper::copy_file_in(memory, config.input_file);
@@ -107,6 +118,10 @@ public:
         blitter(memory),
         scheduler(dma, blitter),
         core(config, memory, scheduler)
+#ifdef RPC
+        ,server_interface(std::make_unique<rpc::ServerInterface>(memory))
+        ,server_wrapper(server_interface)
+#endif
     {
         initialise_memory_state();
 
@@ -121,13 +136,13 @@ public:
 
 
 int main(int argc, char *argv[]) {
+ 
     auto config = vpu::config::parse_arguments(argc, argv);
     if (!config.validate()) {
         exit(1);
     }
 
     vpu::System system(config);
-
     system.run_program();
 
     return 0;

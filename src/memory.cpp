@@ -1,4 +1,5 @@
 #include "memory.h"
+#include "defs_pkg.h"
 #include <assert.h>
 #include <algorithm>
 #include <iostream>
@@ -26,6 +27,7 @@ std::array<uint8_t,vpu::defs::MEM_SIZE>& MemorySnooper::get_data(std::unique_ptr
 }
 
 Memory::Memory() {
+    std::cout << vpu::defs::MEM_SIZE;
     std::fill(data.begin(), data.begin()+vpu::defs::MEM_SIZE, 0);
 }
 

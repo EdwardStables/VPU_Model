@@ -1,3 +1,6 @@
 [submodule "VPU_ASM"]
 	path = VPU_ASM
 	url = git@github.com:EdwardStables/VPU_ASM.git
+[submodule "VPU_Inspector"]
+	path = VPU_Inspector
+	url = git@github.com:EdwardStables/VPU_Inspector.git
