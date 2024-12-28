@@ -25,5 +25,5 @@ To see feedback from the execution you need to set some other options.
 
 ## Tests
 
-Pytest is used for simple tests, ensure pytest is installed and run tests with `pytest`. 
+Pytest is used for simple tests, ensure pytest is installed and run tests with `pytest`. Running `pytest --no_clean` will leave the compiled objects in the `test/binaries` directory, which can be useful for testing.
 
