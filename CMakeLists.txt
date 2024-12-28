@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.13)
 
 project(VPU_MODEL VERSION 0.1 LANGUAGES CXX)
 set (CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -35,6 +35,9 @@ add_executable(vpu
     src/rpc_interface.cpp
     ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
 )
+
+target_compile_options(vpu PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
+target_link_options(vpu PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
 
 #RPC is enabled, attempt to link with library in inspector submodule
 if (NOT ${NORPC})

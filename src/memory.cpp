@@ -7,11 +7,11 @@
 
 namespace vpu::mem {
 
-uint8_t MemorySnooper::get_byte(std::unique_ptr<Memory>& memory, uint32_t index) {
+uint8_t MemorySnooper::get_byte(Memory* memory, uint32_t index) {
     return memory->data[index];
 }
 
-void MemorySnooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesystem::path file) {
+void MemorySnooper::copy_file_in(Memory* memory, std::filesystem::path file) {
     std::ifstream program(file, std::ios::binary | std::ios::in);
     if (!program.is_open()) {
         std::cerr << "Failed to open " << file << " for reading.";
@@ -22,12 +22,12 @@ void MemorySnooper::copy_file_in(std::unique_ptr<Memory>& memory, std::filesyste
     std::copy(new_data.begin(), new_data.end(), memory->data.begin());
 }
 
-std::array<uint8_t,vpu::defs::MEM_SIZE>& MemorySnooper::get_data(std::unique_ptr<Memory>& memory) {
+std::array<uint8_t,vpu::defs::MEM_SIZE>& MemorySnooper::get_data(Memory* memory) {
     return memory->data;
 }
 
 Memory::Memory() {
-    std::cout << vpu::defs::MEM_SIZE;
+    //std::cout << vpu::defs::MEM_SIZE;
     std::fill(data.begin(), data.begin()+vpu::defs::MEM_SIZE, 0);
 }
 

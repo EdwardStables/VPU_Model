@@ -6,7 +6,7 @@
 
 namespace vpu::rpc {
 
-ServerInterface::ServerInterface(std::unique_ptr<vpu::mem::Memory>& memory)
+ServerInterface::ServerInterface(vpu::mem::Memory* memory)
     : memory(memory)
 {
     std::cout << "interface create" << std::endl;

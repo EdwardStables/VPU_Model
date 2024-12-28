@@ -7,10 +7,10 @@
 namespace vpu::rpc {
 
 class ServerInterface : public SimulatorRPCInterface {
-    std::unique_ptr<vpu::mem::Memory>& memory;
+    vpu::mem::Memory* memory;
 public:
-    ServerInterface(std::unique_ptr<vpu::mem::Memory>& memory);
-    virtual std::array<uint8_t,512> get_memory_segment(uint32_t address) override;
+    ServerInterface(vpu::mem::Memory* memory);
+    std::array<uint8_t,512> get_memory_segment(uint32_t address);
 };
 
 }

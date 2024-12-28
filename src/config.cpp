@@ -35,6 +35,12 @@ Config::OptArg Config::OptArg::OptString(std::string l, std::string s, std::stri
 }
 
 bool Config::validate() {
+    if (inspector && dump) {
+        std::cerr << "Cannot run the inspector server and also dump the program" << std::endl;
+        return false;
+    }
+
+
     if (!fs::exists(input_file)) {
         std::cerr << "Provided input program " << input_file << " cannot be found" << std::endl;
         return false;

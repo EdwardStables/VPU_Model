@@ -19,21 +19,24 @@ namespace vpu {
 
 class System {
     config::Config config;
+    
+    //memory is uniquely owned by the system, but is accessed in many places via
+    //raw pointers or references to this
     std::unique_ptr<mem::Memory> memory;
     DMA dma;
     Blitter blitter;
     Scheduler scheduler;
     ManagerCore core;
 
-    #ifdef RPC
-    std::unique_ptr<SimulatorRPCInterface> server_interface;
+#ifdef RPC
+    vpu::rpc::ServerInterface server_interface;
     ServerWrapper server_wrapper; 
-    #endif
+#endif
 
 
 
     void initialise_memory_state() {
-        vpu::mem::MemorySnooper::copy_file_in(memory, config.input_file);
+        vpu::mem::MemorySnooper::copy_file_in(memory.get(), config.input_file);
     };
 
     void dump_program(){
@@ -56,7 +59,7 @@ class System {
 
         std::cout << "Dumping memory state to " << config.dump_mem << std::endl;
         std::ofstream dump(dump_path, std::ios::out | std::ios::binary);
-        auto& data = mem::MemorySnooper::get_data(memory);
+        auto& data = mem::MemorySnooper::get_data(memory.get());
         dump.write((char*)&data[0], data.size());
     }
 
@@ -130,8 +133,8 @@ public:
         scheduler(dma, blitter),
         core(config, memory, scheduler)
 #ifdef RPC
-        ,server_interface(std::make_unique<rpc::ServerInterface>())
-        ,server_wrapper(config.inspector, std::move(server_interface))
+        ,server_interface(rpc::ServerInterface(memory.get()))
+        ,server_wrapper(config.inspector, &server_interface)
 #endif
     {
         initialise_memory_state();
