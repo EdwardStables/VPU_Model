@@ -9,7 +9,6 @@ namespace vpu::rpc {
 ServerInterface::ServerInterface(vpu::mem::Memory* memory)
     : memory(memory)
 {
-    std::cout << "interface create" << std::endl;
 }
 
 std::array<uint8_t,512> ServerInterface::get_memory_segment(uint32_t addr) {

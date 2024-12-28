@@ -88,6 +88,7 @@ class System {
 
 public:
     void run_program() {
+        std::cout << "Executing program." << std::endl;
         uint32_t step_count = 1;
         core.print_status_start();
         while (!core.check_has_halted()) {
@@ -115,12 +116,17 @@ public:
         }
     }
 
+#ifdef RPC
     void wait_for_init() {
+        if (!config.inspector) return;
+        std::cout << "Waiting for RPC server to startup." << std::endl;
         while (!server_wrapper.is_server_running()) {}
     }
+#endif
 
     void end_stall() {
         if (config.wait) {
+            std::cout << "Output stall set, waiting forever. Use ctrl+c to end the simulation" << std::endl;
             while (true) {}
         }
     }
@@ -158,7 +164,10 @@ int main(int argc, char *argv[]) {
     vpu::System system(config);
     if (config.dump) return 0;
 
+#ifdef RPC
     system.wait_for_init();
+#endif
+
     system.run_program();
     system.end_stall();
 
