@@ -133,7 +133,7 @@ public:
         scheduler(dma, blitter),
         core(config, memory, scheduler)
 #ifdef RPC
-        ,server_interface(rpc::ServerInterface(memory.get()))
+        ,server_interface(memory.get())
         ,server_wrapper(config.inspector, &server_interface)
 #endif
     {
