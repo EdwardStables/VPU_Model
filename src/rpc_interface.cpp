@@ -12,7 +12,6 @@ ServerInterface::ServerInterface(vpu::mem::Memory* memory)
 }
 
 std::array<uint8_t,512> ServerInterface::get_memory_segment(uint32_t addr) {
-    std::cout << "interface call" << std::endl;
     assert((addr & 0xFF) == 0);
     std::array<uint8_t,512> ret;
     auto& data = mem::MemorySnooper::get_data(memory);
