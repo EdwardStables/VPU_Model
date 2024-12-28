@@ -137,7 +137,7 @@ public:
         dma(memory),
         blitter(memory),
         scheduler(dma, blitter),
-        core(config, memory, scheduler)
+        core(this->config, memory, scheduler)
 #ifdef RPC
         ,server_interface(memory.get())
         ,server_wrapper(config.inspector, &server_interface)
