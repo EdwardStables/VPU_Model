@@ -42,6 +42,7 @@ struct Config {
 #ifdef RPC
     bool inspector = false;
 #endif
+    bool wait = false;
 
     //Check that each item in the config is valid and the combination of them makes sense.
     bool validate();

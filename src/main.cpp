@@ -22,8 +22,8 @@ class System {
     std::unique_ptr<mem::Memory> memory;
     DMA dma;
     Blitter blitter;
-    ManagerCore core;
     Scheduler scheduler;
+    ManagerCore core;
 
     #ifdef RPC
     std::unique_ptr<SimulatorRPCInterface> server_interface;
@@ -112,6 +112,16 @@ public:
         }
     }
 
+    void wait_for_init() {
+        while (!server_wrapper.is_server_running()) {}
+    }
+
+    void end_stall() {
+        if (config.wait) {
+            while (true) {}
+        }
+    }
+
     System(config::Config config) :
         config(config),
         memory(std::make_unique<vpu::mem::Memory>()),
@@ -120,8 +130,8 @@ public:
         scheduler(dma, blitter),
         core(config, memory, scheduler)
 #ifdef RPC
-        ,server_interface(std::make_unique<rpc::ServerInterface>(memory))
-        ,server_wrapper(config.inspector, server_interface)
+        ,server_interface(std::make_unique<rpc::ServerInterface>())
+        ,server_wrapper(config.inspector, std::move(server_interface))
 #endif
     {
         initialise_memory_state();
@@ -144,7 +154,10 @@ int main(int argc, char *argv[]) {
 
     vpu::System system(config);
     if (config.dump) return 0;
+
+    system.wait_for_init();
     system.run_program();
+    system.end_stall();
 
     return 0;
 }
