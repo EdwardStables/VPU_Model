@@ -181,6 +181,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_COL_R:
+        case vpu::defs::P_BLI_COL_I24:
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
@@ -226,6 +227,10 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_SCH_FNC:
         case vpu::defs::P_DMA_CPY:
         case vpu::defs::P_BLI_CLR:
+            break;
+        //I24 source
+        case vpu::defs::P_BLI_COL_I24:
+            execute_source0 = vpu::defs::get_u24(input.instruction);
             break;
         //Register source
         case vpu::defs::P_DMA_DST_R:
@@ -276,6 +281,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_DMA_LEN_R:
         case vpu::defs::P_DMA_SET_R:
         case vpu::defs::P_BLI_COL_R:
+        case vpu::defs::P_BLI_COL_I24:
         case vpu::defs::P_BLI_CLR:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
@@ -348,6 +354,10 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_DMA_CPY:
         case vpu::defs::P_BLI_CLR:
             break;
+        //I24
+        case vpu::defs::P_BLI_COL_I24:
+            source_value0 = input.source0;
+            break;
         //Register
         case vpu::defs::P_DMA_DST_R:
         case vpu::defs::P_DMA_SRC_R:
@@ -400,6 +410,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_DMA_SET_R:
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_COL_R:
+        case vpu::defs::P_BLI_COL_I24:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
             source_value1 = execute_feedback_reg_held[input.source1] ?
