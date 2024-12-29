@@ -95,7 +95,7 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
     }
 
     //TODO need to confirm if this is actually correct RE cycle execution, same for other pipes
-    if (dma_frontend_queue.size() >= vpu::defs::SCHEDULER_FRONTEND_QUEUE_SIZE) {
+    if (blitter_frontend_queue.size() >= vpu::defs::SCHEDULER_FRONTEND_QUEUE_SIZE) {
         return false;
     }
 
@@ -103,6 +103,17 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
     blitter_frontend_queue.push_back(core_blitter_frontend_state);
     blitter_outstanding++;
     core_blitter_frontend_state.operation = Blitter::NONE;
+
+    //Post process scheduler state for some operations
+    switch(opcode) {
+        //Auto increment character position for SPC instructions to simplify ASM
+        case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SPC_R:
+            core_blitter_frontend_state.xpos += 8;
+            break;
+    }
+
+
     return true;
 }
 

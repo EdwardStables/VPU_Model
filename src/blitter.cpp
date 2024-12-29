@@ -49,7 +49,6 @@ uint8_t Blitter::char_mask(uint8_t character, uint8_t vscan) {
 
 void Blitter::string_cycle() {
     if (working_command.character_vscan == 8) {
-        working_command.xpos += 8;
         state = FINISHED;
         return;
     }
@@ -123,7 +122,9 @@ void Blitter::run_cycle(){
         finished_callback_valid = false;
     }
 
-    if (state == IDLE) return;
+    if (state == IDLE) {
+        return;
+    }
     if (state == FINISHED) {
         state = IDLE;
         return;
@@ -142,7 +143,6 @@ void Blitter::run_cycle(){
     }
 
     if (state == FINISHED) {
-        std::cout << "callback" << std::endl;
         finished_callback = working_callback;
         finished_callback_valid = true;
     }

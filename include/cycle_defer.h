@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include "defs_pkg.h"
+#include <iostream>
 
 namespace vpu {
 
@@ -11,7 +12,7 @@ struct Defer {
 
     bool can_run(){
         uint32_t cur = defs::get_global_cycle();
-        return cycle == cur;
+        return cur >= cycle;
     }
 
     void update(uint32_t new_time) {
