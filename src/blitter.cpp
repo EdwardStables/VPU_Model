@@ -27,13 +27,15 @@ uint8_t Blitter::char_mask(uint8_t character, uint8_t vscan) {
     //is stored in a uint64_t
     
     const uint64_t all_masks[] = {
-        // !"#$%&'
-        0, 0x183C3C18180018, 0x6C6C6C00000000, 0x6C6CFE6CFE6C6C, 0x307CC0780CF830, 0xC6CC183066C6, 0x6060C000000000,
-        //()*+-./
-        0x18306060603018, 0x60301818183060, 0x667EFF7E660000, 0x3030FC30300000, 0xFE00000000, 0x1818, 0x60C183060C080,
-        //01234
+      //space             !                 "                 #                 $
+        0,                0x183C3C18180018, 0x6C6C6C00000000, 0x6C6CFE6CFE6C6C, 0x307CC0780CF830,
+      //%               &                 '                   (                 )
+        0x00C6CC183066C6, 0x3C6C3876DCCC76, 0x6060C000000000, 0x18306060603018, 0x60301818183060, 
+      //*                 +                 `                 -                 .                 /
+        0x667EFF7E660000, 0x3030FC30300000, 0x30301800000000, 0x0000FE00000000, 0x00000000001818, 0x60C183060C080,
+      //0                 1                 2                 3                 4
         0x7CC6CEDEF6E67C, 0x307030303030FE, 0x78CC0C3860CCFC, 0x78CC0C380CCC78, 0xC3C6CCCFE0C1E,
-        //56789
+      //5                 6                 7                 8                 9
         0xFEC0F80C0CCC78, 0x3860C0F8CCCC78, 0xFCCC0C18303030, 0x78CCCC78CCCC78, 0x78CC3C7C0C1870
 
     };
