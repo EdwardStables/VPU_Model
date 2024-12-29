@@ -61,10 +61,17 @@ bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t
 
 bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
+        //Config instructions just setup state for the following instruction and don't actually submit anything
         case vpu::defs::P_BLI_COL_R:
         case vpu::defs::P_BLI_COL_I24:
             core_blitter_frontend_state.colour = (val1 << 8) | 0xFF; //Value in RGB, but colours are RGBA
             return true;
+        case vpu::defs::P_BLI_SPS_R_R:
+            core_blitter_frontend_state.xpos = val1;
+            core_blitter_frontend_state.ypos = val2;
+            return true;
+
+        //Actual kicks to the blitter
         case vpu::defs::P_BLI_PIX_R_R:
             core_blitter_frontend_state.xpos = val1;
             core_blitter_frontend_state.ypos = val2;
@@ -72,6 +79,14 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
             break;
         case vpu::defs::P_BLI_CLR:
             core_blitter_frontend_state.operation = Blitter::CLEAR; 
+            break;
+        case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SPC_R:
+            core_blitter_frontend_state.character = (uint8_t)val1;
+            //Don't support some ASCII ranges, use DEL as a placeholder for unsupported values
+            if (core_blitter_frontend_state.character > 127 || core_blitter_frontend_state.character < 32)
+                core_blitter_frontend_state.character = 127;
+            core_blitter_frontend_state.operation = Blitter::STRING; 
             break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);

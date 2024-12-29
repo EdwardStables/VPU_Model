@@ -13,12 +13,15 @@ public:
     enum Operation {
         NONE,
         CLEAR,
-        PIXEL
+        PIXEL,
+        STRING,
     };
     struct Command {
         uint32_t xpos;
         uint32_t ypos;
         uint32_t colour;
+        uint8_t character;
+        uint8_t character_vscan;
         Operation operation = Blitter::NONE;
     };
 
@@ -36,8 +39,10 @@ private:
     std::function<void()> finished_callback;
     bool finished_callback_valid = false;
 
-    uint32_t next_address();
+    uint8_t char_mask(uint8_t character, uint8_t vscan);
+    uint32_t pixel_address(uint32_t x, uint32_t y);
     void pixel_cycle();
+    void string_cycle();
     void clear_cycle();
 public:
     bool submit(Command command, std::function<void()> completion_callback);
