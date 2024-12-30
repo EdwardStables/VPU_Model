@@ -23,28 +23,10 @@ void Blitter::pixel_cycle() {
 }
 
 uint8_t Blitter::char_mask(uint8_t character, uint8_t vscan) {
-    //Each character is eight 8bit masks stored from bottom row to top. Therefore each supported ascii character
-    //is stored in a uint64_t
-    
-    const uint64_t all_masks[] = {
-      //space             !                 "                 #                 $
-        0,                0x183C3C18180018, 0x6C6C6C00000000, 0x6C6CFE6CFE6C6C, 0x307CC0780CF830,
-      //%               &                 '                   (                 )
-        0x00C6CC183066C6, 0x3C6C3876DCCC76, 0x6060C000000000, 0x18306060603018, 0x60301818183060, 
-      //*                 +                 `                 -                 .                 /
-        0x667EFF7E660000, 0x3030FC30300000, 0x30301800000000, 0x0000FE00000000, 0x00000000001818, 0x60C183060C080,
-      //0                 1                 2                 3                 4
-        0x7CC6CEDEF6E67C, 0x307030303030FE, 0x78CC0C3860CCFC, 0x78CC0C380CCC78, 0xC3C6CCCFE0C1E,
-      //5                 6                 7                 8                 9
-        0xFEC0F80C0CCC78, 0x3860C0F8CCCC78, 0xFCCC0C18303030, 0x78CCCC78CCCC78, 0x78CC3C7C0C1870
-
-    };
-
-    
     const uint32_t index = character - 32;
     
     //while the full table is not yet built, hard-code the invalid input value
-    const uint64_t full_character_mask = (character == 127) ? 0xFF818181818181FF : all_masks[index];
+    const uint64_t full_character_mask = (character == 127) ? 0xFF818181818181FF : vpu::defs::ASCII_TABLE[index];
     const uint8_t line_mask = (full_character_mask >> (8*(7-vscan))) & 0xFF;
     return line_mask;
 }
