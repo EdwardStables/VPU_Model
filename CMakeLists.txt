@@ -8,21 +8,13 @@ set (VPU_INSPECTOR ${CMAKE_CURRENT_SOURCE_DIR}/VPU_Inspector)
 set (VPU_ASM ${CMAKE_CURRENT_SOURCE_DIR}/VPU_ASM)
 set (VPU_DEFS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/defs)
 
+option(NORPC "Disable compilation with RPC. Allows you to miss the inspector submodule and having a gRPC install")
+
 ### NON-CONFIGURABLE CONSTANTS IN CODE ###
 set (VPU_DEFS_NAME defs_pkg)
 set (DEFS_NAMESPACE vpu::defs)
 ### NON-CONFIGURABLE CONSTANTS IN CODE ###
-
-add_custom_command(
-    OUTPUT ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.h ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
-    DEPENDS ${VPU_ASM}/instructions.yaml
-            ${VPU_ASM}/instructions.py
-            ${VPU_ASM}/templates/cpp_def.cpp.j2
-            ${VPU_ASM}/templates/cpp_def.h.j2
-    COMMAND ${VPU_ASM}/instructions.py ${VPU_ASM}/instructions.yaml --cpp ${VPU_DEFS_DIR}/${VPU_DEFS_NAME} --namespace ${DEFS_NAMESPACE}
-)
-
-option(NORPC "Disable compilation with RPC. Allows you to miss the inspector submodule and having a gRPC install")
+add_subdirectory(${VPU_ASM})
 
 add_executable(vpu
     src/main.cpp
@@ -35,6 +27,9 @@ add_executable(vpu
     src/rpc_interface.cpp
     ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
 )
+
+#Runs python generator scripts
+target_link_libraries(vpu vpu_defs)
 
 target_compile_options(vpu PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
 target_link_options(vpu PRIVATE $<$<CONFIG:Debug>:-fsanitize=address>)
