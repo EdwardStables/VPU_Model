@@ -102,8 +102,30 @@ class System {
         blitter.run_cycle();
     }
 
+    bool wait_for_signal(uint32_t pc) {
+#ifndef RPC
+        return true;
+#else
+        std::cout << "Waiting for external control..." << std::endl;
+        server_interface.set_pc(pc);
+        while (true) {
+            auto cmd = server_interface.get_command();
+            if (!cmd) continue;
+
+            //TODO: make actual enums for this
+            if (cmd.value() == 2) {
+                return false; //STEP
+            }
+            if (cmd.value() == 1) {
+                return true; //RUN
+            }
+        }
+#endif
+    }
+
 public:
     void run_program() {
+        bool run_not_step = wait_for_signal(ManagerCoreSnooper::get_register(core,vpu::defs::PC));
         std::cout << "Executing program." << std::endl;
         uint32_t step_count = 1;
         core.print_status_start();
@@ -113,6 +135,7 @@ public:
 
             if (step_count > 0) step_count--;
             core.print_status(vpu::defs::get_global_cycle());
+
             if (config.step && step_count == 0){
                 std::string step_count_str; 
                 std::getline(std::cin, step_count_str);
@@ -121,6 +144,12 @@ public:
                 else
                     step_count = std::stoi(step_count_str);
             }
+
+#ifdef RPC
+            if (config.inspector && !run_not_step) {
+                run_not_step = wait_for_signal(ManagerCoreSnooper::get_register(core,vpu::defs::PC));
+            }
+#endif
         }
 
         if (config.dump_regs != "") {
@@ -156,7 +185,7 @@ public:
         core(this->config, memory, scheduler),
         debug(config.input_file)
 #ifdef RPC
-        ,server_interface(memory.get(), debug)
+        ,server_interface(memory.get(), debug, &core)
         ,server_wrapper(config.inspector, &server_interface)
 #endif
     {
@@ -186,7 +215,6 @@ int main(int argc, char *argv[]) {
 #endif
 
     system.run_program();
-    system.end_stall();
 
     return 0;
 }
