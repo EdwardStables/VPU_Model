@@ -10,6 +10,8 @@
 #include "scheduler.h"
 #include "dma.h"
 
+#include "debug.h"
+
 #ifdef RPC
 #include "rpc_interface.h"
 #include "simulator_rpc.h"
@@ -33,7 +35,7 @@ class System {
     ServerWrapper server_wrapper; 
 #endif
 
-
+    Debug debug;
 
     void initialise_memory_state() {
         vpu::mem::MemorySnooper::copy_file_in(memory.get(), config.input_file);
@@ -46,7 +48,18 @@ class System {
             if (data == 0xFFFFFFFF) break;
             vpu::defs::Opcode opcode = vpu::defs::get_opcode(data);
             std::cout << std::setfill('0') << std::setw(8) << std::hex << i*4;
-            std::cout << " " << vpu::defs::opcode_to_string(opcode) << std::endl;
+            std::cout << " "  << std::setfill(' ') << std::setw(14)
+                      << vpu::defs::opcode_to_string(opcode);
+
+            if (debug.valid) {
+                auto line_opt = debug.get_line_at_pc(i*4);
+                if (line_opt.has_value()) {
+                    std::string& line = line_opt.value().get();
+                    std::cout << line << std::endl;
+                } else {
+                    std::cout << std::endl;
+                }
+            }
         }
     }
 
@@ -142,6 +155,7 @@ public:
         ,server_interface(memory.get())
         ,server_wrapper(config.inspector, &server_interface)
 #endif
+        ,debug(config.input_file)
     {
         initialise_memory_state();
 

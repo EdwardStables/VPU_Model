@@ -25,6 +25,7 @@ add_executable(vpu
     src/scheduler.cpp
     src/blitter.cpp
     src/rpc_interface.cpp
+    src/debug.cpp
     ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
 )
 
@@ -49,3 +50,10 @@ target_include_directories(
 )
 
 
+#Needed for taking MD5 hash
+#TODO: Roll own MD5 to avoid dependency
+find_package(OpenSSL REQUIRED)
+message("OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
+message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
+include_directories(${OPENSSL_INCLUDE_DIR})
+list(APPEND LIB_LIST ${OPENSSL_LIBRARIES})

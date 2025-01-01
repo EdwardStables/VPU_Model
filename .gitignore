@@ -1,6 +1,7 @@
 build
 .vscode
 *.out
+*.dbg
 defs
 .pytest_cache
 __pycache__
