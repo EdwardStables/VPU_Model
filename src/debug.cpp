@@ -83,7 +83,11 @@ bool Debug::parse() {
 
 bool Debug::parse_hash(std::ifstream& file) {
     uint32_t field_size = get_field_size(file);
-    assert(field_size == 16); //Assume 128 bit hash
+    //Assume 128 bit hash
+    if (field_size != 16) {
+        std::cout << "Debug file hash length field appears malformed. Expected value of 16, got " << field_size << std::endl;
+        return false;
+    }
 
     char workingchar;
     int offset = 15;

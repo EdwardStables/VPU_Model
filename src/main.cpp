@@ -45,7 +45,10 @@ class System {
         for (int i=0; true; i++) {
             uint32_t data = memory->read_word(i*4);
             //Region end marker
-            if (data == 0xFFFFFFFF) break;
+            if (data == 0xFFFFFFFF)  {
+                std::cout << "\n";
+                break;
+            }
             vpu::defs::Opcode opcode = vpu::defs::get_opcode(data);
             std::cout << std::setfill('0') << std::setw(8) << std::hex << i*4;
             std::cout << " "  << std::setfill(' ') << std::setw(14)
@@ -54,13 +57,13 @@ class System {
             if (debug.valid) {
                 auto line_opt = debug.get_line_at_pc(i*4);
                 if (line_opt.has_value()) {
-                    std::string& line = line_opt.value().get();
-                    std::cout << line << std::endl;
-                } else {
-                    std::cout << std::endl;
+                    std::cout << line_opt.value().get();
                 }
             }
+
+            std::cout << "\n";
         }
+        std::cout << std::flush;
     }
 
     void dump_mem() {
