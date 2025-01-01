@@ -5,6 +5,8 @@
 #include <openssl/md5.h>
 #include <optional>
 
+namespace vpu {
+
 ObjectHash::ObjectHash() {};
 ObjectHash::ObjectHash(fs::path path) {
     std::ifstream file(path, std::ios::binary);
@@ -153,4 +155,10 @@ std::optional<std::reference_wrapper<std::string>> Debug::get_line_at_pc(uint32_
     uint32_t index = pc_to_line.at(pc >> 2);
     if (index == 0xFFFFFFFF) return std::nullopt;
     return source_file_contents.at(index);
+}
+
+std::vector<std::string> Debug::get_source_code() {
+    return source_file_contents;
+}
+
 }

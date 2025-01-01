@@ -7,6 +7,8 @@
 
 namespace fs = std::filesystem;
 
+namespace vpu {
+
 struct ObjectHash {
     uint64_t upper = 0;
     uint64_t lower = 0;
@@ -49,4 +51,7 @@ public:
     Debug(fs::path object_file, fs::path debug_file);
 
     std::optional<std::reference_wrapper<std::string>> get_line_at_pc(uint32_t pc);
+    std::vector<std::string> get_source_code();
 };
+
+}

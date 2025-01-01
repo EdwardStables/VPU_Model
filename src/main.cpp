@@ -30,12 +30,12 @@ class System {
     Scheduler scheduler;
     ManagerCore core;
 
+    Debug debug;
+
 #ifdef RPC
     vpu::rpc::ServerInterface server_interface;
     ServerWrapper server_wrapper; 
 #endif
-
-    Debug debug;
 
     void initialise_memory_state() {
         vpu::mem::MemorySnooper::copy_file_in(memory.get(), config.input_file);
@@ -153,12 +153,12 @@ public:
         dma(memory),
         blitter(memory),
         scheduler(dma, blitter),
-        core(this->config, memory, scheduler)
+        core(this->config, memory, scheduler),
+        debug(config.input_file)
 #ifdef RPC
-        ,server_interface(memory.get())
+        ,server_interface(memory.get(), debug)
         ,server_wrapper(config.inspector, &server_interface)
 #endif
-        ,debug(config.input_file)
     {
         initialise_memory_state();
 
