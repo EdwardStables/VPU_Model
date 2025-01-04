@@ -61,6 +61,7 @@ class ManagerCore {
     struct MemoryInput {
         vpu::defs::Opcode opcode;
         bool write;
+        uint32_t pc;
         vpu::defs::Register dest;
         uint32_t value;
         //TODO flags
@@ -69,6 +70,7 @@ class ManagerCore {
     struct WritebackInput {
         vpu::defs::Opcode opcode;
         bool write;
+        uint32_t pc;
         vpu::defs::Register dest;
         uint32_t value;
         //TODO flags
@@ -106,10 +108,15 @@ class ManagerCore {
 
     //Status printing
     std::string status_fetch_opcode;
+    uint32_t status_fetch_pc;
     std::string status_decode_opcode;
+    uint32_t status_decode_pc;
     std::string status_execute_opcode;
+    uint32_t status_execute_pc;
     std::string status_memory_opcode;
+    uint32_t status_memory_pc;
     std::string status_writeback_opcode;
+    uint32_t status_writeback_pc;
     std::string pipeline_string();
     std::string pipeline_heading();
     std::string trace_string();

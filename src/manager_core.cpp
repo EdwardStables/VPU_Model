@@ -100,6 +100,7 @@ void ManagerCore::stage_fetch(bool stall, bool flush_valid, uint32_t flush_addr)
     }
 
     status_fetch_opcode = vpu::defs::opcode_to_string_fixed(vpu::defs::get_opcode(decode_instruction));
+    status_fetch_pc = pc;
 
     if (stall)
         return;
@@ -136,15 +137,15 @@ void ManagerCore::stage_decode(bool stall) {
     }
 
     //If above not triggered then the output must be valid
-    auto execute_opcode = vpu::defs::get_opcode(input.instruction);
+    auto decode_opcode = vpu::defs::get_opcode(input.instruction);
     uint8_t reg_index;
 
-    vpu::defs::Register execute_dest = (vpu::defs::Register)0;
-    uint32_t execute_source0 = 0;
-    uint32_t execute_source1 = 0;
+    vpu::defs::Register decode_dest = (vpu::defs::Register)0;
+    uint32_t decode_source0 = 0;
+    uint32_t decode_source2 = 0;
 
     //dest
-    switch(execute_opcode) {
+    switch(decode_opcode) {
         //Nothing
         case vpu::defs::NOP:
         case vpu::defs::HLT:
@@ -162,12 +163,12 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-            execute_dest = vpu::defs::ACC;
+            decode_dest = vpu::defs::ACC;
             break;
         //Register destination
         case vpu::defs::MOV_R_I16:
         case vpu::defs::MOV_R_R:
-            execute_dest = vpu::defs::get_register(input.instruction,0);
+            decode_dest = vpu::defs::get_register(input.instruction,0);
             break;
         
         //Pipes
@@ -187,13 +188,13 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPC_I24:
             break;
         default:
-            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
             std::cerr << " at address " << std::hex << PC();
             std::cerr << " for dest operand" << std::endl;
             assert(false);
     }
     //source0
-    switch(execute_opcode) {
+    switch(decode_opcode) {
         //Nothing
         case vpu::defs::NOP:
         case vpu::defs::HLT:
@@ -204,26 +205,26 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_I24:
         case vpu::defs::LSR_I24:
         case vpu::defs::LSL_I24:
-            execute_source0 = vpu::defs::get_u24(input.instruction);
+            decode_source0 = vpu::defs::get_u24(input.instruction);
             break;
         //Register destination
         case vpu::defs::MOV_R_I16:
-            execute_source0 = vpu::defs::get_u16(input.instruction);
+            decode_source0 = vpu::defs::get_u16(input.instruction);
             break;
         case vpu::defs::CMP_R:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
+            decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         case vpu::defs::CMP_R_R:
         case vpu::defs::MOV_R_R:
-            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,1);
+            decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
         //Label
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
-            execute_source0 = vpu::defs::get_label(input.instruction);
+            decode_source0 = vpu::defs::get_label(input.instruction);
             break;
         //Pipes
         //Nothing
@@ -234,7 +235,7 @@ void ManagerCore::stage_decode(bool stall) {
         //I24 source
         case vpu::defs::P_BLI_COL_I24:
         case vpu::defs::P_BLI_SPC_I24:
-            execute_source0 = vpu::defs::get_u24(input.instruction);
+            decode_source0 = vpu::defs::get_u24(input.instruction);
             break;
         //Register source
         case vpu::defs::P_DMA_DST_R:
@@ -245,16 +246,16 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_BLI_SPC_R:
-            execute_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
+            decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         default:
-            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
             std::cerr << " at address " << std::hex << PC();
             std::cerr << " source operand" << std::endl;
             assert(false);
     }
     //source1
-    switch(execute_opcode) {
+    switch(decode_opcode) {
         //Nothing
         case vpu::defs::NOP:
         case vpu::defs::HLT:
@@ -272,13 +273,13 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-            execute_source1 = (uint32_t)vpu::defs::ACC;
+            decode_source2 = (uint32_t)vpu::defs::ACC;
             break;
         case vpu::defs::CMP_R_R:
-            execute_source1 = (uint32_t)vpu::defs::get_register(input.instruction,0);
+            decode_source2 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         case vpu::defs::CMP_R:
-            execute_source1 = 0;
+            decode_source2 = 0;
         //Pipes
         case vpu::defs::P_SCH_FNC:
         case vpu::defs::P_DMA_CPY:
@@ -294,22 +295,23 @@ void ManagerCore::stage_decode(bool stall) {
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
-            execute_source1 = (uint32_t)vpu::defs::get_register(input.instruction,1);
+            decode_source2 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
         default:
-            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(execute_opcode);
+            std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
             std::cerr << " at address " << std::hex << PC();
             std::cerr << " source operand" << std::endl;
             assert(false);
     }
 
-    status_decode_opcode = vpu::defs::opcode_to_string_fixed(execute_opcode);
+    status_decode_opcode = vpu::defs::opcode_to_string_fixed(decode_opcode);
+    status_decode_pc = input.pc;
     if (!stall) {
         execute_input_queue.push_back(ExecuteInput{
-                execute_opcode,
-                execute_dest,
-                execute_source0,
-                execute_source1,
+                decode_opcode,
+                decode_dest,
+                decode_source0,
+                decode_source2,
                 input.pc,
                 input.next_pc
             }
@@ -439,11 +441,10 @@ void ManagerCore::stage_execute() {
             assert(false);
     }
     
-    bool check_flush = false;
-    bool successful_submit = true;
-    uint32_t memory_next_pc;
+    uint32_t memory_next_pc = input.pc + 4;
     uint32_t unsigned_temp;
     int32_t signed_temp;
+    bool pipeline_submit = false;
     switch(input.opcode) {
         case vpu::defs::NOP:
         case vpu::defs::HLT: //HLT is not actually applied until the final stage to ensure full writeback completes
@@ -488,29 +489,54 @@ void ManagerCore::stage_execute() {
             memory_reg_value = unsigned_temp;
             break;
         case vpu::defs::BRA_L:
-            check_flush = true;
             if (get_flag(vpu::defs::C))
                 memory_next_pc = source_value0;
             else
                 memory_next_pc = input.next_pc;
             break;
         case vpu::defs::JMP_L:
-            check_flush = true;
             memory_next_pc = source_value0;
             break;
         //Pipeline instructions handled in scheduler
         default:
             assert((uint32_t)input.opcode >= 128); //pipeline instructions have a different opcode range
-            successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), input.opcode, source_value0, source_value1);
+            pipeline_submit = true;
     }
 
     //Do before the stall
     status_execute_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
+    status_execute_pc = input.pc;
 
-    //Scheduler stall
-    if (!successful_submit){
-        frontend_stall = true; 
-        return;
+    //Branch pred miss check before commiting any actual data
+    //HLT has a special case of next_pc where it is set to be the same as the current PC, therefore exlude it specifically
+    if (input.next_pc != memory_next_pc && input.opcode != vpu::defs::HLT){
+        //missed on fallthrough
+        if (input.next_pc == input.pc + 4){
+            bht[vpu::defs::get_bht_tag(input.pc)] = true; //look up the actual destination in the btb
+            std::cout << "Set btb 0x" << std::hex << input.pc << " to 0x" << memory_next_pc << std::endl;
+            btb[vpu::defs::get_btb_tag(input.pc)] = memory_next_pc;
+        }
+        
+        //Must flush to resolve the misprediction
+        flush_queue.push_back(memory_next_pc);
+    } 
+    
+    //branch pred hit 
+    else {
+        //fallthrough
+        if (input.next_pc == input.pc + 4){
+            bht[vpu::defs::get_bht_tag(input.pc)] = false; //let it carry on
+        }
+    }
+    
+    //After stalling and branch prediction checks are complete we can actually submit data to the hardware pipes
+    if (pipeline_submit) {
+        bool successful_submit = scheduler.core_submit(vpu::defs::get_next_global_cycle(), input.opcode, source_value0, source_value1);
+        //Scheduler stall
+        if (!successful_submit){
+            frontend_stall = true; 
+            return;
+        }
     }
     frontend_stall = false;
 
@@ -519,29 +545,7 @@ void ManagerCore::stage_execute() {
         execute_feedback_reg_value[(size_t)memory_reg_index] = memory_reg_value;
     }
 
-    if (check_flush) {
-        //branch pred miss
-        if (input.next_pc != memory_next_pc){
-            //missed on fallthrough
-            if (input.next_pc == input.pc + 4){
-                bht[vpu::defs::get_bht_tag(input.pc)] = true; //look up the actual destination in the btb
-                btb[vpu::defs::get_btb_tag(input.pc)] = memory_next_pc;
-            }
-            
-            //Must flush to resolve the misprediction
-            flush_queue.push_back(memory_next_pc);
-        } 
-        
-        //branch pred hit 
-        else {
-            //fallthrough
-            if (input.next_pc == input.pc + 4){
-                bht[vpu::defs::get_bht_tag(input.pc)] = false; //let it carry on
-            }
-        }
-    }
-
-    memory_input_queue.push_back(MemoryInput{memory_opcode, memory_reg_index!=0, memory_reg_index, memory_reg_value});
+    memory_input_queue.push_back(MemoryInput{memory_opcode, memory_reg_index!=0, input.pc, memory_reg_index, memory_reg_value});
 }
 
 void ManagerCore::stage_memory() {
@@ -553,7 +557,8 @@ void ManagerCore::stage_memory() {
     auto input = memory_input_queue.front().data;
 
     status_memory_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
-    writeback_input_queue.push_back(WritebackInput{input.opcode, input.write, input.dest, input.value});
+    status_memory_pc = input.pc;
+    writeback_input_queue.push_back(WritebackInput{input.opcode, input.write, input.pc, input.dest, input.value});
 }
 
 void ManagerCore::stage_writeback() {
@@ -577,6 +582,7 @@ void ManagerCore::stage_writeback() {
         execute_feedback_reg_held[input.dest] = false;
     }
     status_writeback_opcode = vpu::defs::opcode_to_string_fixed(input.opcode);
+    status_writeback_pc = input.pc;
 }
 
 void ManagerCore::set_flag(vpu::defs::Flag flag) {
@@ -640,22 +646,47 @@ std::string ManagerCore::pipeline_heading() {
 }
 
 std::string ManagerCore::pipeline_string() {
-    std::string op;    
-    std::string na(vpu::defs::MAX_OPCODE_LEN, '-');
+    std::stringstream op;    
+    std::string na(vpu::defs::MAX_OPCODE_LEN + std::string(" (0x00000000)").length(), '-');
     uint32_t cycle = vpu::defs::get_global_cycle();
-    op += "| ";
-    op += status_fetch_opcode.length() ? status_fetch_opcode : na;
-    op += " | ";
-    op += status_decode_opcode.length() ? status_decode_opcode : na;
-    op += " | ";
-    op += status_execute_opcode.length() ? status_execute_opcode : na;
-    op += " | ";
-    op += status_memory_opcode.length() ? status_memory_opcode : na;
-    op += " | ";
-    op += writeback_valid ? vpu::defs::opcode_to_string_fixed(writeback_opcode) : na;
-    op += " |";
+    op << "| ";
+    if (status_fetch_opcode.length()) {
+        op << status_fetch_opcode;
+        op << " (0x" << std::setfill('0') << std::setw(8) << std::hex << status_fetch_pc << ")";
+    } else {
+        op << na;
+    }
+    op << " | ";
+    if (status_decode_opcode.length()) {
+        op << status_decode_opcode;
+        op << " (0x" << std::setfill('0') << std::setw(8) << std::hex << status_decode_pc << ")";
+    } else {
+        op << na;
+    }
+    op << " | ";
+    if (status_execute_opcode.length()) {
+        op << status_execute_opcode;
+        op << " (0x" << std::setfill('0') << std::setw(8) << std::hex << status_execute_pc << ")";
+    } else {
+        op << na;
+    }
+    op << " | ";
+    if (status_memory_opcode.length()) {
+        op << status_memory_opcode;
+        op << " (0x" << std::setfill('0') << std::setw(8) << std::hex << status_memory_pc << ")";
+    } else {
+        op << na;
+    }
+    op << " | ";
+    if (writeback_valid) {
+        op << status_writeback_opcode;
+        op << " (0x" << std::setfill('0') << std::setw(8) << std::hex << status_writeback_pc << ")";
+    } else {
+        op << na;
+    }
+    op << " |";
 
-    return op;
+    return op.str();
 }
 
 std::string ManagerCore::trace_string() {

@@ -51,6 +51,8 @@ class System {
             }
             vpu::defs::Opcode opcode = vpu::defs::get_opcode(data);
             std::cout << std::setfill('0') << std::setw(8) << std::hex << i*4;
+            std::cout << " ";
+            std::cout << std::setfill('0') << std::setw(8) << std::hex << data;
             std::cout << " "  << std::setfill(' ') << std::setw(14)
                       << vpu::defs::opcode_to_string(opcode);
 
@@ -106,6 +108,7 @@ class System {
 #ifndef RPC
         return true;
 #else
+        if (!config.wait) return true;
         std::cout << "Waiting for external control..." << std::endl;
         server_interface.set_pc(pc);
         while (true) {
@@ -159,6 +162,8 @@ public:
         if (config.dump_mem != "") {
             dump_mem();
         }
+
+        wait_for_signal(ManagerCoreSnooper::get_register(core,vpu::defs::PC));
     }
 
 #ifdef RPC
