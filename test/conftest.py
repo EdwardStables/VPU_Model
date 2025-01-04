@@ -54,7 +54,7 @@ def get_images(path: Path):
         raise NotImplementedError("Multi-image testing not yet done")
     if not path.exists():
         raise FileNotFoundError(f"Couldn't find file {path}")
-    yield Image.open(path).load()
+    yield Image.open(path)
 
 @pytest.fixture
 def reference_image(request):

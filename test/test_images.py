@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from util import RegState
-from PIL import Image
+from PIL import Image, ImageFile, ImageChops
 
 TEST_FILES = [
     "dma_copy",
@@ -13,7 +13,11 @@ def params(prog):
 
 @pytest.mark.parametrize("run_program, reference_image, output_image", params("blitter_text"), indirect=True)
 def test_blitter_text(run_program, reference_image, output_image):
-    #Constants that may change with config, currently no easy way to extract them
-    pass
+    reference_image: ImageFile
+    output_image: ImageFile
+
+    diff = ImageChops.difference(reference_image, output_image)
+
+    assert not diff.getbbox(), "Images are different"
 
 
