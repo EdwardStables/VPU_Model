@@ -4,8 +4,10 @@ from VPU_ASM.assembler import Program
 from pathlib import Path
 from subprocess import run
 from util import RegState
+from PIL import Image
 
 PROGS = Path("VPU_ASM/test_programs")
+IMGS = Path("VPU_ASM/test_images")
 BINS = Path("test/binaries")
 DUMP = Path("test/dumps")
 make_args = lambda file: [(PROGS/(file+".asm"),"test/binaries/"+file+".out")]
@@ -17,7 +19,7 @@ def isa():
 
 @pytest.fixture
 def run_program(isa, request, clean):
-    prog, regs, mem = request.param
+    prog, regs, mem, framebuffer = request.param
     inp = PROGS / (prog + ".asm")
     bin = BINS / (prog + ".out")
     dump_reg = DUMP / (prog + ".reg")
@@ -46,6 +48,21 @@ def run_program(isa, request, clean):
         Path(bin).unlink()
         dump_reg.unlink(missing_ok=True)
         dump_mem.unlink(missing_ok=True)
+
+def get_images(path: Path):
+    if path.isdir():
+        raise NotImplementedError("Multi-image testing not yet done")
+    if not path.exists():
+        raise FileNotFoundError(f"Couldn't find file {path}")
+    yield Image.open(path).load()
+
+@pytest.fixture
+def reference_image(request):
+    yield get_images(IMGS/request.param)
+
+@pytest.fixture
+def output_image(request):
+    yield get_images(DUMP/request.param)
 
 @pytest.fixture
 def actual_registers(request):

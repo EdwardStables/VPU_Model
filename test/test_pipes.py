@@ -8,7 +8,7 @@ TEST_FILES = [
 ]
 
 def params(prog):
-    return [((prog,False,True),prog)]
+    return [((prog,False,True,False),prog)]
 
 @pytest.mark.parametrize("run_program, actual_memory", params("dma_set"), indirect=True)
 def test_dma_set(run_program,actual_memory):
@@ -97,5 +97,3 @@ def test_blit_clear(run_program,actual_memory):
             assert actual_memory[addr+1] == 0xFF
             assert actual_memory[addr+2] == 0xFF
             assert actual_memory[addr+3] == 0xFF
-
-
