@@ -1,6 +1,6 @@
 import pytest 
 from VPU_ASM.instructions import ISADefinition, load_from_yaml
-from VPU_ASM.assembler import Program, write_out
+from VPU_ASM.assembler import Program
 from pathlib import Path
 from subprocess import run
 from util import RegState
@@ -24,7 +24,8 @@ def run_program(isa, request, clean):
     dump_mem = DUMP / (prog + ".mem")
     assert inp.exists()
 
-    write_out(Program(inp, isa), Path(bin))
+    program = Program(inp, isa)
+    program.write_out(Path(bin),False)
     assert bin.exists()
 
     cmd = f"build/vpu {bin}"
