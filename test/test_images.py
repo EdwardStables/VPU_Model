@@ -7,7 +7,7 @@ def params():
     progs = [
         "blitter_text"
     ]
-    return [((p,False,True,True),p+".png",p+".png") for p in progs]
+    return [((p,False,False,True),p+".png",p+".png") for p in progs]
 
 @pytest.mark.parametrize("run_program, reference_images, output_images", params(), indirect=True)
 def test_framebuffer_output(run_program, reference_images, output_images):
