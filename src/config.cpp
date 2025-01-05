@@ -66,13 +66,14 @@ Config parse_arguments(int argc, char *argv[]) {
 #ifdef RPC
         {"inspect",   Config::OptArg::OptBoolean("--inspect",   "-i", "Start an RPC server and launch the inspector tool")},
 #endif
-        {"dump",      Config::OptArg::OptBoolean("--dump",      "-d", "Dump a human readable copy of the input program")},
-        {"pipeline",  Config::OptArg::OptBoolean("--pipeline",  "-p", "Print pipeline state")},
-        {"trace",     Config::OptArg::OptBoolean("--trace",     "-t", "Print core state each clock")},
-        {"step",      Config::OptArg::OptBoolean("--step",      "-s", "Step a specific number of instructions")},
-        {"dump_regs", Config::OptArg::OptString( "--dump_regs", "-r", "Dump the register state in a file after completion")},
-        {"dump_mem",  Config::OptArg::OptString( "--dump_mem",  "-m", "Dump the memory buffer in a file after completion")},
-        {"wait",      Config::OptArg::OptBoolean("--wait",      "-w", "Run the simulation to completion but don't exit")},
+        {"dump",              Config::OptArg::OptBoolean("--dump",             "-d", "Dump a human readable copy of the input program")},
+        {"pipeline",          Config::OptArg::OptBoolean("--pipeline",         "-p", "Print pipeline state")},
+        {"trace",             Config::OptArg::OptBoolean("--trace",            "-t", "Print core state each clock")},
+        {"step",              Config::OptArg::OptBoolean("--step",             "-s", "Step a specific number of instructions")},
+        {"dump_regs",         Config::OptArg::OptString( "--dump_regs",        "-r", "Dump the register state in a file after completion")},
+        {"dump_mem",          Config::OptArg::OptString( "--dump_mem",         "-m", "Dump the memory buffer in a file after completion")},
+        {"dump_framebuffer",  Config::OptArg::OptString( "--dump_framebuffer", "-f", "Dump the active framebuffer to a png file in the given directory. Directory must exist, files are numbered incrementally.")},
+        {"wait",              Config::OptArg::OptBoolean("--wait",             "-w", "Run the simulation to completion but don't exit")},
     };
 
     bool print_help = false;
@@ -86,7 +87,7 @@ Config parse_arguments(int argc, char *argv[]) {
         //optional argument
         if (argv[i][0] == '-'){
             if (expecting_optional) {
-                std::cerr << "Unexpected argument " << argv[i] << ". Was expection a value after  " << argv[i-1] << std::endl;
+                std::cerr << "Unexpected argument " << argv[i] << ". Was expecting a value after  " << argv[i-1] << std::endl;
                 error = true;
             }
             for (auto& [name, attrs] : optional_arguments) {
@@ -179,7 +180,7 @@ Config parse_arguments(int argc, char *argv[]) {
         std::cerr << "\n" << "Optional Arguments:" << std::endl;
 
         for (auto& [name, attrs] : optional_arguments) {
-            std::string hint_name = attrs.long_name + "/" + attrs.short_name;
+            std::string hint_name = attrs.long_name + "/" + attrs.short_name ;
             size_t padding = max_len - hint_name.size();
             std::cerr << "    " << hint_name;
             for (int i = 0; i < padding; i++) std::cerr << " ";
@@ -201,6 +202,7 @@ Config parse_arguments(int argc, char *argv[]) {
     config.step = std::get<bool>(optional_arguments["step"].value);
     config.dump_regs = std::get<std::string>(optional_arguments["dump_regs"].value);
     config.dump_mem = std::get<std::string>(optional_arguments["dump_mem"].value);
+    config.dump_framebuffer = std::get<std::string>(optional_arguments["dump_framebuffer"].value);
     config.inspector = std::get<bool>(optional_arguments["inspect"].value);
     config.wait = std::get<bool>(optional_arguments["wait"].value);
 

@@ -24,6 +24,11 @@ def run_program(isa, request, clean):
     bin = BINS / (prog + ".out")
     dump_reg = DUMP / (prog + ".reg")
     dump_mem = DUMP / (prog + ".mem")
+    dump_framebuffer = DUMP / (prog + "_framebuffer")
+
+    assert not dump_framebuffer.exists() or dump_framebuffer.is_dir(), "Frambuffer output location exists but is a file not directory"
+    if not dump_framebuffer.exists():
+        dump_framebuffer.mkdir()
     assert inp.exists()
 
     program = Program(inp, isa)
@@ -35,6 +40,8 @@ def run_program(isa, request, clean):
         cmd += f" --dump_regs {dump_reg}"
     if mem:
         cmd += f" --dump_mem {dump_mem}"
+    if framebuffer:
+        cmd += f" --dump_framebuffer {dump_framebuffer}"
     proc = run(cmd, timeout=5, shell=True)
 
     assert proc.returncode == 0
@@ -42,26 +49,39 @@ def run_program(isa, request, clean):
         assert dump_reg.exists()
     if mem:
         assert dump_mem.exists()
+    if framebuffer:
+        assert dump_framebuffer.exists() and dump_framebuffer.is_dir()
 
     yield
+
+    #Remove files
     if clean:
         Path(bin).unlink()
         dump_reg.unlink(missing_ok=True)
         dump_mem.unlink(missing_ok=True)
+    #Remove directories if feature flag enabled
+    if clean and framebuffer:
+        for file in dump_framebuffer.iterdir():
+            assert not file.is_dir(), "Found unexpected directory in framebuffer dump location"
+            file.unlink()
+        dump_framebuffer.rmdir()
 
 def get_images(path: Path):
-    if path.isdir():
-        raise NotImplementedError("Multi-image testing not yet done")
     if not path.exists():
-        raise FileNotFoundError(f"Couldn't find file {path}")
-    yield Image.open(path)
+        raise FileNotFoundError(f"Couldn't find {path}")
+    if not path.is_dir():
+        raise Exception(f"Expected image path to give a directory not file {path}")
+
+    files = [f for f in path.iterdir() if f.is_file()]
+    files.sort(key=lambda f: f.name)
+    yield [Image.open(f) for f in files]
 
 @pytest.fixture
-def reference_image(request):
+def reference_images(request):
     yield get_images(IMGS/request.param)
 
 @pytest.fixture
-def output_image(request):
+def output_images(request):
     yield get_images(DUMP/request.param)
 
 @pytest.fixture

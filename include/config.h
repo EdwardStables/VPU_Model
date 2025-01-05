@@ -39,6 +39,7 @@ struct Config {
     bool step = false;
     std::string dump_regs = "";
     std::string dump_mem = "";
+    std::string dump_framebuffer = "";
 #ifdef RPC
     bool inspector = false;
 #endif
