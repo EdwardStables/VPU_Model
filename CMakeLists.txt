@@ -26,6 +26,7 @@ add_executable(vpu
     src/blitter.cpp
     src/rpc_interface.cpp
     src/debug.cpp
+    src/stb.cpp
     ${VPU_DEFS_DIR}/${VPU_DEFS_NAME}.cpp
 )
 
@@ -47,6 +48,7 @@ target_include_directories(
     vpu
     PRIVATE include
     PRIVATE ${VPU_DEFS_DIR}
+    PRIVATE stb
 )
 
 

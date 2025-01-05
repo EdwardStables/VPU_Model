@@ -4,3 +4,6 @@
 [submodule "VPU_Inspector"]
 	path = VPU_Inspector
 	url = git@github.com:EdwardStables/VPU_Inspector.git
+[submodule "stb"]
+	path = stb
+	url = git@github.com:nothings/stb.git
