@@ -18,7 +18,7 @@ def isa():
     return ISADefinition(isa_dict)
 
 @pytest.fixture
-def run_program(isa, request, clean):
+def run_program(isa, request, clean, release):
     prog, regs, mem, framebuffer = request.param
     inp = PROGS / (prog + ".asm")
     bin = BINS / (prog + ".out")
@@ -35,7 +35,7 @@ def run_program(isa, request, clean):
     program.write_out(Path(bin),False)
     assert bin.exists()
 
-    cmd = f"build/vpu {bin}"
+    cmd = f"{'release' if release else 'build'}/vpu {bin}"
     if regs:
         cmd += f" --dump_regs {dump_reg}"
     if mem:
@@ -107,8 +107,12 @@ def actual_memory(request):
 
 def pytest_addoption(parser):
     parser.addoption("--no_clean", action="store_true")
+    parser.addoption("--release", action="store_true")
 
 def pytest_generate_tests(metafunc):
     no_clean = metafunc.config.option.no_clean
     if 'clean' in metafunc.fixturenames:
         metafunc.parametrize("clean",[not no_clean])
+    release = metafunc.config.option.release
+    if 'release' in metafunc.fixturenames:
+        metafunc.parametrize("release",[release])
