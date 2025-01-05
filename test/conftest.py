@@ -24,10 +24,10 @@ def run_program(isa, request, clean):
     bin = BINS / (prog + ".out")
     dump_reg = DUMP / (prog + ".reg")
     dump_mem = DUMP / (prog + ".mem")
-    dump_framebuffer = DUMP / (prog + "_framebuffer")
+    dump_framebuffer = DUMP / ("frames_" + prog)
 
     assert not dump_framebuffer.exists() or dump_framebuffer.is_dir(), "Frambuffer output location exists but is a file not directory"
-    if not dump_framebuffer.exists():
+    if framebuffer and not dump_framebuffer.exists():
         dump_framebuffer.mkdir()
     assert inp.exists()
 
@@ -72,17 +72,17 @@ def get_images(path: Path):
     if not path.is_dir():
         raise Exception(f"Expected image path to give a directory not file {path}")
 
-    files = [f for f in path.iterdir() if f.is_file()]
+    files = [f for f in path.iterdir() if f.is_file() and f.name.startswith("frame_") and f.name.endswith(".png")]
     files.sort(key=lambda f: f.name)
-    yield [Image.open(f) for f in files]
+    return [(f,Image.open(f)) for f in files]
 
 @pytest.fixture
 def reference_images(request):
-    yield get_images(IMGS/request.param)
+    return get_images(IMGS/request.param)
 
 @pytest.fixture
 def output_images(request):
-    yield get_images(DUMP/request.param)
+    return get_images(DUMP/request.param)
 
 @pytest.fixture
 def actual_registers(request):

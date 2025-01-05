@@ -4,6 +4,7 @@
 
 #include "defs_pkg.h"
 #include "manager_core.h"
+#include "stb_image_write.h"
 
 namespace vpu {
 
@@ -186,6 +187,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SWP:
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
@@ -231,6 +233,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_SCH_FNC:
         case vpu::defs::P_DMA_CPY:
         case vpu::defs::P_BLI_CLR:
+        case vpu::defs::P_BLI_SWP:
             break;
         //I24 source
         case vpu::defs::P_BLI_COL_I24:
@@ -292,6 +295,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SWP:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
@@ -364,6 +368,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_SCH_FNC:
         case vpu::defs::P_DMA_CPY:
         case vpu::defs::P_BLI_CLR:
+        case vpu::defs::P_BLI_SWP:
             break;
         //I24
         case vpu::defs::P_BLI_COL_I24:
@@ -427,6 +432,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_COL_I24:
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SWP:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
@@ -513,7 +519,6 @@ void ManagerCore::stage_execute() {
         //missed on fallthrough
         if (input.next_pc == input.pc + 4){
             bht[vpu::defs::get_bht_tag(input.pc)] = true; //look up the actual destination in the btb
-            std::cout << "Set btb 0x" << std::hex << input.pc << " to 0x" << memory_next_pc << std::endl;
             btb[vpu::defs::get_btb_tag(input.pc)] = memory_next_pc;
         }
         
@@ -536,6 +541,11 @@ void ManagerCore::stage_execute() {
         if (!successful_submit){
             frontend_stall = true; 
             return;
+        }
+
+        //Framebuffer dump
+        if (input.opcode == vpu::defs::P_BLI_SWP && config.dump_framebuffer.length() != 0) {
+            write_framebuffer();
         }
     }
     frontend_stall = false;
@@ -700,6 +710,30 @@ std::string ManagerCore::trace_string() {
         op += " " + std::to_string(flags[i]) + " \t";
     }
     return op;
+}
+
+void ManagerCore::write_framebuffer() {
+    std::stringstream output_file_ss;
+    output_file_ss <<  config.dump_framebuffer + "/frame_";
+    output_file_ss << std::setw(5) << std::setfill('0') << std::to_string(frames_written);
+    output_file_ss << ".png";
+    std::string output_file = output_file_ss.str();
+    
+    int x = vpu::defs::FRAMEBUFFER_WIDTH;
+    int y = vpu::defs::FRAMEBUFFER_HEIGHT;
+    int comp = 4; //RGBA
+    int stride = vpu::defs::FRAMEBUFFER_WIDTH * vpu::defs::FRAMEBUFFER_PIXEL_BYTES;
+
+    auto& all_mem = vpu::mem::MemorySnooper::get_data(memory.get());
+    void* data = (&(all_mem[0])) + vpu::defs::FRAMEBUFFER_ADDR;
+
+    std::cout << output_file << std::endl;
+
+    int r = stbi_write_png(output_file.c_str(), x, y, comp, data, stride);
+    if (r == 0) {
+        std::cerr << "Failed to write frame " << frames_written << std::endl;
+    }
+    frames_written++;
 }
 
 }

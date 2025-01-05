@@ -106,6 +106,10 @@ class ManagerCore {
     vpu::defs::Opcode writeback_opcode;
     /* End stages */    
 
+    //Framebuffer output
+    uint32_t frames_written = 0;
+    void write_framebuffer();
+
     //Status printing
     std::string status_fetch_opcode;
     uint32_t status_fetch_pc;
@@ -120,7 +124,6 @@ class ManagerCore {
     std::string pipeline_string();
     std::string pipeline_heading();
     std::string trace_string();
-
 public:
     ManagerCore(
         vpu::config::Config& config,

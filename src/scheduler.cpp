@@ -70,6 +70,8 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
             core_blitter_frontend_state.xpos = val1;
             core_blitter_frontend_state.ypos = val2;
             return true;
+        case vpu::defs::P_BLI_SWP: //Eventually this may update internal pointers, for now it just triggers a dump in the main core
+            return true;
 
         //Actual kicks to the blitter
         case vpu::defs::P_BLI_PIX_R_R:
