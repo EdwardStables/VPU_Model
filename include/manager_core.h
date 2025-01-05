@@ -110,6 +110,8 @@ class ManagerCore {
     uint32_t frames_written = 0;
     void write_framebuffer();
 
+    uint32_t get_int_literal(uint32_t instruction);
+
     //Status printing
     std::string status_fetch_opcode;
     uint32_t status_fetch_pc;

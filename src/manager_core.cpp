@@ -37,6 +37,9 @@ void ManagerCore::update_pc() {
 }
 
 void ManagerCore::run_cycle() {
+    if (PC() == 0)
+        registers[vpu::defs::PC] = memory->read_word(0); //Starting instr addr stored at 0
+
     //Flush always happen
     uint32_t flush_addr = 0;
     bool flush_valid = false;
@@ -156,18 +159,18 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::CMP_R_R:
             break;
         //Immediate 24-bit
-        case vpu::defs::MOV_I24:
-        case vpu::defs::ADD_I24:
-        case vpu::defs::ASR_I24:
-        case vpu::defs::LSR_I24:
-        case vpu::defs::LSL_I24:
+        case vpu::defs::MOV_I:
+        case vpu::defs::ADD_I:
+        case vpu::defs::ASR_I:
+        case vpu::defs::LSR_I:
+        case vpu::defs::LSL_I:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
             decode_dest = vpu::defs::ACC;
             break;
         //Register destination
-        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
             decode_dest = vpu::defs::get_register(input.instruction,0);
             break;
@@ -183,10 +186,10 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_COL_R:
-        case vpu::defs::P_BLI_COL_I24:
+        case vpu::defs::P_BLI_COL_I:
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_BLI_SPC_R:
-        case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
             break;
         default:
@@ -202,16 +205,16 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::HLT:
             break;
         //Immediate 24-bit
-        case vpu::defs::MOV_I24:
-        case vpu::defs::ADD_I24:
-        case vpu::defs::ASR_I24:
-        case vpu::defs::LSR_I24:
-        case vpu::defs::LSL_I24:
-            decode_source0 = vpu::defs::get_u24(input.instruction);
+        case vpu::defs::MOV_I:
+        case vpu::defs::ADD_I:
+        case vpu::defs::ASR_I:
+        case vpu::defs::LSR_I:
+        case vpu::defs::LSL_I:
+            decode_source0 = get_int_literal(input.instruction);
             break;
         //Register destination
-        case vpu::defs::MOV_R_I16:
-            decode_source0 = vpu::defs::get_u16(input.instruction);
+        case vpu::defs::MOV_R_I:
+            decode_source0 = get_int_literal(input.instruction);
             break;
         case vpu::defs::CMP_R:
         case vpu::defs::ASR_R:
@@ -235,10 +238,10 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_SWP:
             break;
-        //I24 source
-        case vpu::defs::P_BLI_COL_I24:
-        case vpu::defs::P_BLI_SPC_I24:
-            decode_source0 = vpu::defs::get_u24(input.instruction);
+        //I source
+        case vpu::defs::P_BLI_COL_I:
+        case vpu::defs::P_BLI_SPC_I:
+            decode_source0 = get_int_literal(input.instruction);
             break;
         //Register source
         case vpu::defs::P_DMA_DST_R:
@@ -262,17 +265,17 @@ void ManagerCore::stage_decode(bool stall) {
         //Nothing
         case vpu::defs::NOP:
         case vpu::defs::HLT:
-        case vpu::defs::MOV_I24:
-        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_I:
+        case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
             break;
         //applied to ACC
-        case vpu::defs::ADD_I24:
-        case vpu::defs::ASR_I24:
-        case vpu::defs::LSR_I24:
-        case vpu::defs::LSL_I24:
+        case vpu::defs::ADD_I:
+        case vpu::defs::ASR_I:
+        case vpu::defs::LSR_I:
+        case vpu::defs::LSL_I:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
@@ -291,10 +294,10 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_DMA_LEN_R:
         case vpu::defs::P_DMA_SET_R:
         case vpu::defs::P_BLI_COL_R:
-        case vpu::defs::P_BLI_COL_I24:
+        case vpu::defs::P_BLI_COL_I:
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_SPC_R:
-        case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
@@ -343,12 +346,12 @@ void ManagerCore::stage_execute() {
         case vpu::defs::HLT:
             break;
         //Immediate 24-bit
-        case vpu::defs::MOV_I24:
-        case vpu::defs::ADD_I24:
-        case vpu::defs::ASR_I24:
-        case vpu::defs::LSR_I24:
-        case vpu::defs::LSL_I24:
-        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_I:
+        case vpu::defs::ADD_I:
+        case vpu::defs::ASR_I:
+        case vpu::defs::LSR_I:
+        case vpu::defs::LSL_I:
+        case vpu::defs::MOV_R_I:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
             source_value0 = input.source0;
@@ -370,9 +373,9 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_SWP:
             break;
-        //I24
-        case vpu::defs::P_BLI_COL_I24:
-        case vpu::defs::P_BLI_SPC_I24:
+        //I
+        case vpu::defs::P_BLI_COL_I:
+        case vpu::defs::P_BLI_SPC_I:
             source_value0 = input.source0;
             break;
         //Register
@@ -399,8 +402,8 @@ void ManagerCore::stage_execute() {
         //Nothing
         case vpu::defs::NOP:
         case vpu::defs::HLT:
-        case vpu::defs::MOV_I24:
-        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_I:
+        case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
@@ -408,10 +411,10 @@ void ManagerCore::stage_execute() {
             source_value1 = input.source1;
             break;
         //applied to ACC
-        case vpu::defs::ADD_I24:
-        case vpu::defs::ASR_I24:
-        case vpu::defs::LSR_I24:
-        case vpu::defs::LSL_I24:
+        case vpu::defs::ADD_I:
+        case vpu::defs::ASR_I:
+        case vpu::defs::LSR_I:
+        case vpu::defs::LSL_I:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
@@ -429,9 +432,9 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_DMA_SET_R:
         case vpu::defs::P_BLI_CLR:
         case vpu::defs::P_BLI_COL_R:
-        case vpu::defs::P_BLI_COL_I24:
+        case vpu::defs::P_BLI_COL_I:
         case vpu::defs::P_BLI_SPC_R:
-        case vpu::defs::P_BLI_SPC_I24:
+        case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
@@ -455,13 +458,13 @@ void ManagerCore::stage_execute() {
         case vpu::defs::NOP:
         case vpu::defs::HLT: //HLT is not actually applied until the final stage to ensure full writeback completes
             break;
-        case vpu::defs::MOV_R_I16:
+        case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
-        case vpu::defs::MOV_I24:
+        case vpu::defs::MOV_I:
             memory_reg_index = input.dest;
             memory_reg_value = source_value0;
             break;
-        case vpu::defs::ADD_I24:
+        case vpu::defs::ADD_I:
             memory_reg_index = input.dest;
             memory_reg_value = source_value0 + source_value1;
             break;
@@ -473,14 +476,14 @@ void ManagerCore::stage_execute() {
             else
                 unset_flag(vpu::defs::C);
             break;
-        case vpu::defs::ASR_I24:
+        case vpu::defs::ASR_I:
         case vpu::defs::ASR_R:
             signed_temp = (int32_t)source_value1;
             signed_temp >>= source_value0;
             memory_reg_index = input.dest;
             memory_reg_value = signed_temp;
             break;
-        case vpu::defs::LSR_I24:
+        case vpu::defs::LSR_I:
         case vpu::defs::LSR_R:
             unsigned_temp = (int32_t)source_value1;
             unsigned_temp >>= source_value0;
@@ -488,7 +491,7 @@ void ManagerCore::stage_execute() {
             memory_reg_value = unsigned_temp;
             break;
         case vpu::defs::LSL_R:
-        case vpu::defs::LSL_I24:
+        case vpu::defs::LSL_I:
             unsigned_temp = (int32_t)source_value1;
             unsigned_temp <<= source_value0;
             memory_reg_index = input.dest;
@@ -647,7 +650,7 @@ std::string ManagerCore::pipeline_heading() {
     std::string op = "|";
     for (auto& h : headers){
         op += " ";
-        h.insert(0, vpu::defs::MAX_OPCODE_LEN - h.size(), ' ');
+        h.insert(0, vpu::defs::MAX_OPCODE_LEN + std::string(" (0x00000000)").length() - h.size(), ' ');
         op += h;
         op += " |";
     }
@@ -734,6 +737,12 @@ void ManagerCore::write_framebuffer() {
         std::cerr << "Failed to write frame " << frames_written << std::endl;
     }
     frames_written++;
+}
+
+uint32_t ManagerCore::get_int_literal(uint32_t instruction) {
+    uint32_t index = instruction & 0x0000FFFF;
+
+    return memory->read_word(vpu::defs::LITERAL_TABLE_ADDR + (4*index));
 }
 
 }

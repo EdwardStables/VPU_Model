@@ -42,22 +42,22 @@ class System {
     };
 
     void dump_program(){
-        for (int i=0; true; i++) {
-            uint32_t data = memory->read_word(i*4);
+        for (int i=memory->read_word(0); true; i+=4) {
+            uint32_t data = memory->read_word(i);
             //Region end marker
             if (data == 0xFFFFFFFF)  {
                 std::cout << "\n";
                 break;
             }
             vpu::defs::Opcode opcode = vpu::defs::get_opcode(data);
-            std::cout << std::setfill('0') << std::setw(8) << std::hex << i*4;
+            std::cout << std::setfill('0') << std::setw(8) << std::hex << i;
             std::cout << " ";
             std::cout << std::setfill('0') << std::setw(8) << std::hex << data;
             std::cout << " "  << std::setfill(' ') << std::setw(14)
                       << vpu::defs::opcode_to_string(opcode);
 
             if (debug.valid) {
-                auto line_opt = debug.get_line_at_pc(i*4);
+                auto line_opt = debug.get_line_at_pc(i);
                 if (line_opt.has_value()) {
                     std::cout << line_opt.value().get();
                 }
