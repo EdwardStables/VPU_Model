@@ -578,7 +578,14 @@ void ManagerCore::stage_execute() {
 }
 
 void ManagerCore::stage_memory() {
-    //TODO: Implement memory accessing
+    /*
+    This stage currently does nothing due to the simplistic memory implementation
+    Memory accesses occur in the previous cycle, and in reality the data would not return until this stage
+
+
+    Once a proper memory heirarchy is simulated, this stage will receive the data. For cached data this should lead to no stalls,
+    for non-cached data this stage will stall on reads until data returns.
+    */
 
     if (memory_input_queue.empty() || !memory_input_queue.front().can_run()) return;
 
