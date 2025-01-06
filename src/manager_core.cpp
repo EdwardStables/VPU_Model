@@ -23,6 +23,7 @@ ManagerCore::ManagerCore(
     has_halted(false)
 {
     registers.fill(0);
+    registers[vpu::defs::SP] = 0x100000; //Start of writable region
     flags.fill(0);
     btb.fill(0xDEADBEEF);
     bht.fill(false);
