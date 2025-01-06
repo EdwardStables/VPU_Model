@@ -32,3 +32,17 @@ def expected_registers(request):
 )
 def test_register_state(run_program,actual_registers,expected_registers):
     assert actual_registers == expected_registers
+
+@pytest.mark.parametrize("run_program, actual_memory", [(("store",False,True,False),"store")], indirect=True)
+def test_store(run_program,actual_memory):
+    base = 0x100000
+    assert actual_memory[base] == 123
+    assert actual_memory[base+1] == 0
+
+@pytest.mark.parametrize("run_program, actual_memory, actual_registers", [(("load",True,True,False),"load","load")], indirect=True)
+def test_load(run_program, actual_memory, actual_registers):
+    base = 0x100000
+    assert actual_memory[base] == 123
+    assert actual_memory[base+4] == 0xFF & 321
+    assert actual_memory[base+5] == 0xFF & (321 >> 8)
+    assert actual_registers == RegState(0x3c, 123, 0x100000, 0, 0, 0, 0, 0, 0,0)

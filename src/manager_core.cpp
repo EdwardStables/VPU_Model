@@ -157,6 +157,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::BRA_L:
         case vpu::defs::CMP_R:
         case vpu::defs::CMP_R_R:
+        case vpu::defs::STW_R:
             break;
         //Immediate 24-bit
         case vpu::defs::MOV_I:
@@ -167,6 +168,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
+        case vpu::defs::LDW_R:
             decode_dest = vpu::defs::ACC;
             break;
         //Register destination
@@ -174,7 +176,6 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::MOV_R_R:
             decode_dest = vpu::defs::get_register(input.instruction,0);
             break;
-        
         //Pipes
         //Nothing
         case vpu::defs::P_SCH_FNC:
@@ -220,6 +221,8 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
+        case vpu::defs::STW_R:
+        case vpu::defs::LDW_R:
             decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         case vpu::defs::CMP_R_R:
@@ -270,6 +273,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::MOV_R_R:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
+        case vpu::defs::LDW_R:
             break;
         //applied to ACC
         case vpu::defs::ADD_I:
@@ -279,6 +283,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
+        case vpu::defs::STW_R:
             decode_source2 = (uint32_t)vpu::defs::ACC;
             break;
         case vpu::defs::CMP_R_R:
@@ -360,6 +365,8 @@ void ManagerCore::stage_execute() {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
+        case vpu::defs::LDW_R:
+        case vpu::defs::STW_R:
         case vpu::defs::CMP_R_R:
         case vpu::defs::MOV_R_R:
             source_value0 = execute_feedback_reg_held[input.source0] ?
@@ -408,6 +415,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
         case vpu::defs::CMP_R:
+        case vpu::defs::LDW_R:
             source_value1 = input.source1;
             break;
         //applied to ACC
@@ -418,6 +426,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
+        case vpu::defs::STW_R:
         case vpu::defs::CMP_R_R:
             source_value1 = execute_feedback_reg_held[input.source1] ?
                                     execute_feedback_reg_value[input.source1] :
@@ -505,6 +514,13 @@ void ManagerCore::stage_execute() {
             break;
         case vpu::defs::JMP_L:
             memory_next_pc = source_value0;
+            break;
+        case vpu::defs::STW_R:
+            memory->write_word(source_value0, source_value1);
+            break;
+        case vpu::defs::LDW_R:
+            memory_reg_index = input.dest;
+            memory_reg_value = memory->read_word(source_value0);
             break;
         //Pipeline instructions handled in scheduler
         default:
