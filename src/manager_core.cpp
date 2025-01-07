@@ -560,7 +560,6 @@ void ManagerCore::stage_execute() {
         case vpu::defs::STW_R:
         case vpu::defs::STW_R_R:
         case vpu::defs::STW_R_I:
-            std::cout << "save " << acc_value << " to " << std::hex << source_value0 << " + " << source_value1 << " = " << mem_access_address << std::endl;
             memory->write_word(mem_access_address, acc_value);
             break;
         case vpu::defs::LDW_R:
@@ -568,7 +567,6 @@ void ManagerCore::stage_execute() {
         case vpu::defs::LDW_R_I:
             memory_reg_index = input.dest;
             memory_reg_value = memory->read_word(mem_access_address);
-            std::cout << "loaded " << memory_reg_value << " from " << std::hex << source_value0 << " + " << source_value1 << " = " << mem_access_address << std::endl;
             break;
         //Pipeline instructions handled in scheduler
         default:
@@ -618,7 +616,6 @@ void ManagerCore::stage_execute() {
     frontend_stall = false;
 
     if (memory_reg_index != (vpu::defs::Register)0){
-        std::cout << "forward buffer store " << memory_reg_index << " " << memory_reg_value << std::endl;
         execute_feedback_reg_held[(size_t)memory_reg_index] = true;
         execute_feedback_reg_value[(size_t)memory_reg_index] = memory_reg_value;
     }
