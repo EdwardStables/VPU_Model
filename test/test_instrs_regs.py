@@ -15,12 +15,12 @@ TEST_FILES = [
 def expected_registers(request):
     prog = request.param
     expected = {
-        "nops" :         RegState(0x1c,  0,  0, 0, 0, 0, 0, 0, 0, 0),
-        "branch" :       RegState(0x30, 10, 10, 0, 0, 0, 0, 0, 0, 0),
-        "inc" :          RegState(0x1c, 11,  0, 0, 0, 0, 0, 0, 0, 0),
-        "jump" :         RegState(0x28, 23,  0, 0, 0, 0, 0, 0, 0, 0),
-        "left_shifts" :  RegState(0x30,  4,  2, 4, 0, 0, 0, 0, 0, 2),
-        "right_shifts" : RegState(0x50,  4,  1, 4, 1, 4, 0, 0, 0, 1),
+        "nops" :         RegState(0x1c,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "branch" :       RegState(0x30, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "inc" :          RegState(0x1c, 11,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "jump" :         RegState(0x28, 23,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "left_shifts" :  RegState(0x30,  4,  2, 4, 0, 0, 0, 0, 0, 2, 0x100000, 0),
+        "right_shifts" : RegState(0x50,  4,  1, 4, 1, 4, 0, 0, 0, 1, 0x100000, 0),
     }
     assert prog in expected
     yield expected[prog]
@@ -45,7 +45,7 @@ def test_load(run_program, actual_memory, actual_registers):
     assert actual_memory[base] == 123
     assert actual_memory[base+4] == 0xFF & 321
     assert actual_memory[base+5] == 0xFF & (321 >> 8)
-    assert actual_registers == RegState(0x3c, 123, 0x100000, 0, 0, 0, 0, 0, 0,0)
+    assert actual_registers == RegState(0x3c, 123, 0x100000, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0)
 
 @pytest.mark.parametrize("run_program, actual_memory, actual_registers", [(("load_store_offsets",True,True,False),"load_store_offsets","load_store_offsets")], indirect=True)
 def test_load(run_program, actual_memory, actual_registers):
