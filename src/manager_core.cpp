@@ -159,10 +159,13 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::CMP_R:
         case vpu::defs::CMP_R_R:
         case vpu::defs::STW_R:
+        case vpu::defs::STW_R_R:
+        case vpu::defs::STW_R_I:
             break;
         //Immediate 24-bit
         case vpu::defs::MOV_I:
         case vpu::defs::ADD_I:
+        case vpu::defs::ADD_R:
         case vpu::defs::ASR_I:
         case vpu::defs::LSR_I:
         case vpu::defs::LSL_I:
@@ -170,6 +173,8 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
         case vpu::defs::LDW_R:
+        case vpu::defs::LDW_R_R:
+        case vpu::defs::LDW_R_I:
             decode_dest = vpu::defs::ACC;
             break;
         //Register destination
@@ -219,14 +224,19 @@ void ManagerCore::stage_decode(bool stall) {
             decode_source0 = get_int_literal(input.instruction);
             break;
         case vpu::defs::CMP_R:
+        case vpu::defs::ADD_R:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
         case vpu::defs::STW_R:
         case vpu::defs::LDW_R:
+        case vpu::defs::STW_R_R:
+        case vpu::defs::STW_R_I:
+        case vpu::defs::LDW_R_R:
+        case vpu::defs::LDW_R_I:
+        case vpu::defs::CMP_R_R:
             decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
-        case vpu::defs::CMP_R_R:
         case vpu::defs::MOV_R_R:
             decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
@@ -274,7 +284,10 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::MOV_R_R:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
+            break;
+        case vpu::defs::STW_R:
         case vpu::defs::LDW_R:
+            decode_source2 = 0;
             break;
         //applied to ACC
         case vpu::defs::ADD_I:
@@ -284,14 +297,21 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-        case vpu::defs::STW_R:
+        case vpu::defs::ADD_R:
             decode_source2 = (uint32_t)vpu::defs::ACC;
             break;
         case vpu::defs::CMP_R_R:
-            decode_source2 = (uint32_t)vpu::defs::get_register(input.instruction,0);
+        case vpu::defs::STW_R_R:
+        case vpu::defs::LDW_R_R:
+            decode_source2 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
         case vpu::defs::CMP_R:
             decode_source2 = 0;
+            break;
+        case vpu::defs::STW_R_I:
+        case vpu::defs::LDW_R_I:
+            decode_source2 = (uint32_t)get_int_literal(input.instruction);
+            break;
         //Pipes
         case vpu::defs::P_SCH_FNC:
         case vpu::defs::P_DMA_CPY:
@@ -368,6 +388,11 @@ void ManagerCore::stage_execute() {
         case vpu::defs::LSL_R:
         case vpu::defs::LDW_R:
         case vpu::defs::STW_R:
+        case vpu::defs::ADD_R:
+        case vpu::defs::LDW_R_I:
+        case vpu::defs::STW_R_I:
+        case vpu::defs::LDW_R_R:
+        case vpu::defs::STW_R_R:
         case vpu::defs::CMP_R_R:
         case vpu::defs::MOV_R_R:
             source_value0 = execute_feedback_reg_held[input.source0] ?
@@ -416,18 +441,23 @@ void ManagerCore::stage_execute() {
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
         case vpu::defs::CMP_R:
+        case vpu::defs::STW_R:
         case vpu::defs::LDW_R:
+        case vpu::defs::LDW_R_I:
+        case vpu::defs::STW_R_I:
             source_value1 = input.source1;
             break;
         //applied to ACC
         case vpu::defs::ADD_I:
+        case vpu::defs::ADD_R:
         case vpu::defs::ASR_I:
         case vpu::defs::LSR_I:
         case vpu::defs::LSL_I:
         case vpu::defs::ASR_R:
         case vpu::defs::LSR_R:
         case vpu::defs::LSL_R:
-        case vpu::defs::STW_R:
+        case vpu::defs::LDW_R_R:
+        case vpu::defs::STW_R_R:
         case vpu::defs::CMP_R_R:
             source_value1 = execute_feedback_reg_held[input.source1] ?
                                     execute_feedback_reg_value[input.source1] :
@@ -459,6 +489,14 @@ void ManagerCore::stage_execute() {
             std::cerr << " source operand" << std::endl;
             assert(false);
     }
+
+    //Store instructions have three sources, but one of them is always ACC
+    //Therefore we can explicitly save it here to maintain the above structure
+    uint32_t acc_value = execute_feedback_reg_held[vpu::defs::ACC] ?
+                            execute_feedback_reg_value[vpu::defs::ACC] :
+                            registers[vpu::defs::ACC];
+    //Also calculate the sum to simplify case statement for store/load
+    uint32_t mem_access_address = source_value0 + source_value1; 
     
     uint32_t memory_next_pc = input.pc + 4;
     uint32_t unsigned_temp;
@@ -474,6 +512,7 @@ void ManagerCore::stage_execute() {
             memory_reg_index = input.dest;
             memory_reg_value = source_value0;
             break;
+        case vpu::defs::ADD_R:
         case vpu::defs::ADD_I:
             memory_reg_index = input.dest;
             memory_reg_value = source_value0 + source_value1;
@@ -517,11 +556,17 @@ void ManagerCore::stage_execute() {
             memory_next_pc = source_value0;
             break;
         case vpu::defs::STW_R:
-            memory->write_word(source_value0, source_value1);
+        case vpu::defs::STW_R_R:
+        case vpu::defs::STW_R_I:
+            std::cout << "save " << acc_value << " to " << std::hex << source_value0 << " + " << source_value1 << " = " << mem_access_address << std::endl;
+            memory->write_word(mem_access_address, acc_value);
             break;
         case vpu::defs::LDW_R:
+        case vpu::defs::LDW_R_R:
+        case vpu::defs::LDW_R_I:
             memory_reg_index = input.dest;
-            memory_reg_value = memory->read_word(source_value0);
+            memory_reg_value = memory->read_word(mem_access_address);
+            std::cout << "loaded " << memory_reg_value << " from " << std::hex << source_value0 << " + " << source_value1 << " = " << mem_access_address << std::endl;
             break;
         //Pipeline instructions handled in scheduler
         default:
@@ -571,6 +616,7 @@ void ManagerCore::stage_execute() {
     frontend_stall = false;
 
     if (memory_reg_index != (vpu::defs::Register)0){
+        std::cout << "forward buffer store " << memory_reg_index << " " << memory_reg_value << std::endl;
         execute_feedback_reg_held[(size_t)memory_reg_index] = true;
         execute_feedback_reg_value[(size_t)memory_reg_index] = memory_reg_value;
     }
