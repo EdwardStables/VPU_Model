@@ -27,6 +27,8 @@ ManagerCore::ManagerCore(
     flags.fill(0);
     btb.fill(0xDEADBEEF);
     bht.fill(false);
+    execute_feedback_reg_held.fill(false);
+    execute_feedback_reg_value.fill(0);
 }
 
 void ManagerCore::stage_pc(uint32_t new_pc) {
