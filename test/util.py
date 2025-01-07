@@ -11,3 +11,5 @@ class RegState:
     R6: int
     R7: int
     R8: int
+    SP: int
+    RA: int

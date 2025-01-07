@@ -46,3 +46,11 @@ def test_load(run_program, actual_memory, actual_registers):
     assert actual_memory[base+4] == 0xFF & 321
     assert actual_memory[base+5] == 0xFF & (321 >> 8)
     assert actual_registers == RegState(0x3c, 123, 0x100000, 0, 0, 0, 0, 0, 0,0)
+
+@pytest.mark.parametrize("run_program, actual_memory, actual_registers", [(("load_store_offsets",True,True,False),"load_store_offsets","load_store_offsets")], indirect=True)
+def test_load(run_program, actual_memory, actual_registers):
+    base = 0x100000
+    for i in range(10):
+        assert actual_memory[base+(4*i)] == i+1
+
+    assert actual_registers == RegState(0x7c, 55, 36, 55, 36, 10, 0, 0, 0, 0, 0x100000, 0)
