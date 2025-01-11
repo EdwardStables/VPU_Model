@@ -12,14 +12,14 @@ DMA::DMA(std::unique_ptr<vpu::mem::Memory>& memory) :
 }
 
 bool DMA::submit(Command command, std::function<void()> completion_callback) {
-    if (state == WORKING){ //Can accept input when idle or on last cycle of work
+    if (state == State::WORKING){ //Can accept input when idle or on last cycle of work
         return false;
     }
     assert(command.operation != Operation::NONE);
     assert(command.dest < vpu::defs::MEM_SIZE);
     assert(command.dest + command.length < vpu::defs::MEM_SIZE);
 
-    state = WORKING; 
+    state = State::WORKING; 
     work_cycle = vpu::defs::get_next_global_cycle();
     working_command = command;
     working_callback = completion_callback;
@@ -119,7 +119,7 @@ void DMA::copy_cycle() {
     std::rotate(active_buffer.begin(), active_buffer.begin()+write_size, active_buffer.end());
 
     if (write_pointer >= working_command.dest + working_command.length) {
-        state = FINISHED;
+        state = State::FINISHED;
         active_buffer_valid = false;
         assert(fetched_writeback_data_valid == false);
         assert(active_buffer_size == 0);
@@ -153,7 +153,7 @@ void DMA::set_cycle() {
     }
     write_pointer += vpu::defs::MEM_ACCESS_WIDTH;
     if (write_pointer >= working_command.dest + working_command.length){
-        state = FINISHED;
+        state = State::FINISHED;
         assert(fetched_writeback_data_valid == false);
     }
 }
@@ -164,9 +164,9 @@ void DMA::run_cycle() {
         finished_callback_valid = false;
     }
 
-    if (state == IDLE) return;
-    if (state == FINISHED){ //Finish on the following cycle
-        state = IDLE;
+    if (state == State::IDLE) return;
+    if (state == State::FINISHED){ //Finish on the following cycle
+        state = State::IDLE;
         return; //may want to rework this to avoid a bubble
     }
     
@@ -181,7 +181,7 @@ void DMA::run_cycle() {
             assert(false);
     }
     
-    if (state == FINISHED){
+    if (state == State::FINISHED){
         finished_callback = working_callback;
         finished_callback_valid = true;
     }

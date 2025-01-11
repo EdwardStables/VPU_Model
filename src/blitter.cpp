@@ -19,7 +19,7 @@ uint32_t Blitter::pixel_address(uint32_t x, uint32_t y) {
 
 void Blitter::pixel_cycle() {
     memory->write_word(pixel_address(working_command.xpos, working_command.ypos), working_command.colour);
-    state = FINISHED;
+    state = State::FINISHED;
 }
 
 uint8_t Blitter::char_mask(uint8_t character, uint8_t vscan) {
@@ -33,7 +33,7 @@ uint8_t Blitter::char_mask(uint8_t character, uint8_t vscan) {
 
 void Blitter::string_cycle() {
     if (working_command.character_vscan == 8) {
-        state = FINISHED;
+        state = State::FINISHED;
         return;
     }
 
@@ -77,7 +77,7 @@ void Blitter::clear_cycle() {
     assert(vpu::defs::MEM_ACCESS_WIDTH == 4 * vpu::defs::BLITTER_MAX_PIXELS);
 
     if (working_command.ypos >= defs::FRAMEBUFFER_HEIGHT) {
-        state = FINISHED;
+        state = State::FINISHED;
         return;
     }
 
@@ -106,11 +106,11 @@ void Blitter::run_cycle(){
         finished_callback_valid = false;
     }
 
-    if (state == IDLE) {
+    if (state == State::IDLE) {
         return;
     }
-    if (state == FINISHED) {
-        state = IDLE;
+    if (state == State::FINISHED) {
+        state = State::IDLE;
         return;
     }
 
@@ -126,7 +126,7 @@ void Blitter::run_cycle(){
             assert(false);
     }
 
-    if (state == FINISHED) {
+    if (state == State::FINISHED) {
         finished_callback = working_callback;
         finished_callback_valid = true;
     }
@@ -138,13 +138,13 @@ Blitter::Blitter(std::unique_ptr<vpu::mem::Memory>& memory)
 }
 
 bool Blitter::submit(Command command, std::function<void()> completion_callback) {
-    if (state == WORKING) {
+    if (state == State::WORKING) {
         return false;
     }
 
     assert(command.operation != NONE);
 
-    state = WORKING;
+    state = State::WORKING;
     work_cycle = vpu::defs::get_next_global_cycle();
     working_command = command;
     working_callback = completion_callback;
