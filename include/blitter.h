@@ -4,28 +4,27 @@
 
 #include "defs_pkg.h"
 #include "memory.h"
+#include "subsystem.h"
 
-namespace vpu {
+namespace vpu::blit {
 
-class Blitter {
-    
-public:
-    enum Operation {
-        NONE,
-        CLEAR,
-        PIXEL,
-        STRING,
-    };
-    struct Command {
-        uint32_t xpos;
-        uint32_t ypos;
-        uint32_t colour;
-        uint8_t character;
-        uint8_t character_vscan;
-        Operation operation = Blitter::NONE;
-    };
+enum Operation {
+    NONE,
+    CLEAR,
+    PIXEL,
+    STRING,
+};
 
-private:
+struct Command {
+    uint32_t xpos;
+    uint32_t ypos;
+    uint32_t colour;
+    uint8_t character;
+    uint8_t character_vscan;
+    Operation operation = Operation::NONE;
+};
+
+class Blitter : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;
     enum {
         IDLE,
@@ -45,10 +44,9 @@ private:
     void string_cycle();
     void clear_cycle();
 public:
-    bool submit(Command command, std::function<void()> completion_callback);
     Blitter(std::unique_ptr<vpu::mem::Memory>& memory);
-    void run_cycle();
-
+    virtual bool submit(Command command, std::function<void()> completion_callback);
+    virtual void run_cycle();
 };
 
 }

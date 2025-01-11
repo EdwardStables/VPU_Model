@@ -3,7 +3,7 @@
 
 #include "dma.h"
 
-namespace vpu {
+namespace vpu::dma {
 
 DMA::DMA(std::unique_ptr<vpu::mem::Memory>& memory) :
     memory(memory)
@@ -11,11 +11,11 @@ DMA::DMA(std::unique_ptr<vpu::mem::Memory>& memory) :
 
 }
 
-bool DMA::submit(DMA::Command command, std::function<void()> completion_callback) {
+bool DMA::submit(Command command, std::function<void()> completion_callback) {
     if (state == WORKING){ //Can accept input when idle or on last cycle of work
         return false;
     }
-    assert(command.operation != NONE);
+    assert(command.operation != Operation::NONE);
     assert(command.dest < vpu::defs::MEM_SIZE);
     assert(command.dest + command.length < vpu::defs::MEM_SIZE);
 
@@ -174,8 +174,8 @@ void DMA::run_cycle() {
     if (vpu::defs::get_global_cycle() < work_cycle) return;
     
     switch(working_command.operation){
-        case COPY: copy_cycle(); break;
-        case SET : set_cycle(); break;
+        case Operation::COPY: copy_cycle(); break;
+        case Operation::SET : set_cycle(); break;
         default:
             std::cerr << "Invalid DMA operation ";
             assert(false);

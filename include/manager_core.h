@@ -26,14 +26,17 @@ class ManagerCore {
     std::array<bool,vpu::defs::FLAG_COUNT> flags;
     std::array<bool,vpu::defs::BHT_SIZE> bht;
     std::array<uint32_t,vpu::defs::BTB_SIZE> btb;
+
     bool has_halted;
     bool frontend_stall = false;
     uint32_t potential_next_pc;
+
     void update_pc();
     void stage_pc(uint32_t new_pc);
     void set_flag(vpu::defs::Flag flag);
     void unset_flag(vpu::defs::Flag flag);
     bool get_flag(vpu::defs::Flag flag);
+
     uint32_t PC();
 
     Scheduler& scheduler;

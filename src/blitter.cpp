@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <iostream>
 
-namespace vpu {
+namespace vpu::blit {
 
 //Calculate the address of the next pixel coordinate in the working_command
 uint32_t Blitter::pixel_address(uint32_t x, uint32_t y) {

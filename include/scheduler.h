@@ -11,8 +11,8 @@ namespace vpu {
 
 class Scheduler {
     //Pipelines
-    DMA& dma;
-    Blitter& blitter;
+    dma::DMA& dma;
+    blit::Blitter& blitter;
 
     std::deque<std::tuple<
         uint32_t,    //valid cycle
@@ -23,10 +23,10 @@ class Scheduler {
 
     //Frontends maintain state for setting up commands
     //uint32_t is the earliest time it can be submitted
-    DMA::Command core_dma_frontend_state;
-    std::deque<Defer<DMA::Command>> dma_frontend_queue;
-    Blitter::Command core_blitter_frontend_state;
-    std::deque<Defer<Blitter::Command>> blitter_frontend_queue;
+    dma::Command core_dma_frontend_state;
+    std::deque<Defer<dma::Command>> dma_frontend_queue;
+    blit::Command core_blitter_frontend_state;
+    std::deque<Defer<blit::Command>> blitter_frontend_queue;
 
 
     //Outstanding request count
@@ -43,8 +43,8 @@ class Scheduler {
     void check_blitter();
 public:
     Scheduler(
-        DMA& dma,
-        Blitter& blitter
+        dma::DMA& dma,
+        blit::Blitter& blitter
     );
 
     //Submit an instruction to the scheduler

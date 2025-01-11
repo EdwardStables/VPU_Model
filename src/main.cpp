@@ -25,8 +25,8 @@ class System {
     //memory is uniquely owned by the system, but is accessed in many places via
     //raw pointers or references to this
     std::unique_ptr<mem::Memory> memory;
-    DMA dma;
-    Blitter blitter;
+    dma::DMA dma;
+    blit::Blitter blitter;
     Scheduler scheduler;
     ManagerCore core;
 

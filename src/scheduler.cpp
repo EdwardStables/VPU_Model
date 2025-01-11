@@ -5,7 +5,7 @@
 
 namespace vpu {
 
-Scheduler::Scheduler(DMA& dma, Blitter& blitter)
+Scheduler::Scheduler(dma::DMA& dma, blit::Blitter& blitter)
     : dma(dma), blitter(blitter)
 {
  
@@ -24,10 +24,10 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
             return true;
         case vpu::defs::P_DMA_SET_R:
             core_dma_frontend_state.value = val1;
-            core_dma_frontend_state.operation = DMA::SET;
+            core_dma_frontend_state.operation = dma::Operation::SET;
             break;
         case vpu::defs::P_DMA_CPY:
-            core_dma_frontend_state.operation = DMA::COPY;
+            core_dma_frontend_state.operation = dma::Operation::COPY;
             break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
@@ -44,7 +44,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
     //When there is space, copy the frontend into the queue
     dma_frontend_queue.push_back(core_dma_frontend_state);
     dma_outstanding++;
-    core_dma_frontend_state.operation = DMA::NONE;
+    core_dma_frontend_state.operation = dma::Operation::NONE;
     return true;
 }
 
@@ -77,10 +77,10 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
         case vpu::defs::P_BLI_PIX_R_R:
             core_blitter_frontend_state.xpos = val1;
             core_blitter_frontend_state.ypos = val2;
-            core_blitter_frontend_state.operation = Blitter::PIXEL; 
+            core_blitter_frontend_state.operation = blit::Operation::PIXEL; 
             break;
         case vpu::defs::P_BLI_CLR:
-            core_blitter_frontend_state.operation = Blitter::CLEAR; 
+            core_blitter_frontend_state.operation = blit::Operation::CLEAR; 
             break;
         case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SPC_R:
@@ -88,7 +88,7 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
             //Don't support some ASCII ranges, use DEL as a placeholder for unsupported values
             if (core_blitter_frontend_state.character > 127 || core_blitter_frontend_state.character < 32)
                 core_blitter_frontend_state.character = 127;
-            core_blitter_frontend_state.operation = Blitter::STRING; 
+            core_blitter_frontend_state.operation = blit::Operation::STRING; 
             break;
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
@@ -104,7 +104,7 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
     //When there is space, copy the frontend into the queue
     blitter_frontend_queue.push_back(core_blitter_frontend_state);
     blitter_outstanding++;
-    core_blitter_frontend_state.operation = Blitter::NONE;
+    core_blitter_frontend_state.operation = blit::Operation::NONE;
 
     //Post process scheduler state for some operations
     switch(opcode) {
