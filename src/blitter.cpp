@@ -117,9 +117,9 @@ void Blitter::run_cycle(){
     if (vpu::defs::get_global_cycle() < work_cycle) return;
 
     switch(working_command.operation) {
-        case PIXEL: pixel_cycle(); break;
-        case STRING: string_cycle(); break;
-        case CLEAR: clear_cycle(); break;
+        case Operation::PIXEL: pixel_cycle(); break;
+        case Operation::STRING: string_cycle(); break;
+        case Operation::CLEAR: clear_cycle(); break;
 
         default:
             std::cerr << "Invalid Blitter operation ";
@@ -142,17 +142,17 @@ bool Blitter::submit(Command command, std::function<void()> completion_callback)
         return false;
     }
 
-    assert(command.operation != NONE);
+    assert(command.operation != Operation::NONE);
 
     state = State::WORKING;
     work_cycle = vpu::defs::get_next_global_cycle();
     working_command = command;
     working_callback = completion_callback;
-    if (working_command.operation == CLEAR){
+    if (working_command.operation == Operation::CLEAR){
         working_command.xpos = 0;
         working_command.ypos = 0;
     }
-    if (working_command.operation == STRING){
+    if (working_command.operation == Operation::STRING){
         working_command.character_vscan = 0;
     }
     

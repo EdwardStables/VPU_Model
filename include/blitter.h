@@ -8,7 +8,7 @@
 
 namespace vpu::blit {
 
-enum Operation {
+enum class Operation {
     NONE,
     CLEAR,
     PIXEL,
