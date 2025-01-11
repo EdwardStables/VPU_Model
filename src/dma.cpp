@@ -11,20 +11,13 @@ DMA::DMA(std::unique_ptr<vpu::mem::Memory>& memory) :
 
 }
 
-bool DMA::submit(Command command, std::function<void()> completion_callback) {
-    if (state == State::WORKING){ //Can accept input when idle or on last cycle of work
-        return false;
-    }
-    assert(command.operation != Operation::NONE);
-    assert(command.dest < vpu::defs::MEM_SIZE);
-    assert(command.dest + command.length < vpu::defs::MEM_SIZE);
+bool DMA::submit() {
+    assert(working_command.operation != Operation::NONE);
+    assert(working_command.dest < vpu::defs::MEM_SIZE);
+    assert(working_command.dest + working_command.length < vpu::defs::MEM_SIZE);
 
-    state = State::WORKING; 
-    work_cycle = vpu::defs::get_next_global_cycle();
-    working_command = command;
-    working_callback = completion_callback;
-    write_pointer = command.dest & 0xFFFFFFC0;
-    read_pointer = command.source & 0xFFFFFFC0;
+    write_pointer = working_command.dest & 0xFFFFFFC0;
+    read_pointer = working_command.source & 0xFFFFFFC0;
     return true;
 }
 
@@ -159,31 +152,12 @@ void DMA::set_cycle() {
 }
 
 void DMA::run_cycle() {
-    if (finished_callback_valid) {
-        finished_callback();
-        finished_callback_valid = false;
-    }
-
-    if (state == State::IDLE) return;
-    if (state == State::FINISHED){ //Finish on the following cycle
-        state = State::IDLE;
-        return; //may want to rework this to avoid a bubble
-    }
-    
-    //Cannot start on first cycle
-    if (vpu::defs::get_global_cycle() < work_cycle) return;
-    
     switch(working_command.operation){
         case Operation::COPY: copy_cycle(); break;
         case Operation::SET : set_cycle(); break;
         default:
             std::cerr << "Invalid DMA operation ";
             assert(false);
-    }
-    
-    if (state == State::FINISHED){
-        finished_callback = working_callback;
-        finished_callback_valid = true;
     }
 }
 

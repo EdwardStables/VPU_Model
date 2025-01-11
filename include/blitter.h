@@ -33,7 +33,7 @@ class Blitter : public Subsystem<Command> {
     void clear_cycle();
 public:
     Blitter(std::unique_ptr<vpu::mem::Memory>& memory);
-    virtual bool submit(Command command, std::function<void()> completion_callback);
+    virtual bool submit();
     virtual void run_cycle();
 };
 

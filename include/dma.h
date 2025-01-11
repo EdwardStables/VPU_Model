@@ -39,7 +39,7 @@ class DMA : public Subsystem<Command> {
     void set_cycle();
 public:
     DMA(std::unique_ptr<vpu::mem::Memory>& memory);
-    virtual bool submit(Command command, std::function<void()> completion_callback);
+    virtual bool submit();
     virtual void run_cycle();
 };
 

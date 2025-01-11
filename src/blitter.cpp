@@ -101,21 +101,6 @@ void Blitter::clear_cycle() {
 }
 
 void Blitter::run_cycle(){
-    if (finished_callback_valid) {
-        finished_callback();
-        finished_callback_valid = false;
-    }
-
-    if (state == State::IDLE) {
-        return;
-    }
-    if (state == State::FINISHED) {
-        state = State::IDLE;
-        return;
-    }
-
-    if (vpu::defs::get_global_cycle() < work_cycle) return;
-
     switch(working_command.operation) {
         case Operation::PIXEL: pixel_cycle(); break;
         case Operation::STRING: string_cycle(); break;
@@ -125,11 +110,6 @@ void Blitter::run_cycle(){
             std::cerr << "Invalid Blitter operation ";
             assert(false);
     }
-
-    if (state == State::FINISHED) {
-        finished_callback = working_callback;
-        finished_callback_valid = true;
-    }
 }
 
 Blitter::Blitter(std::unique_ptr<vpu::mem::Memory>& memory)
@@ -137,17 +117,9 @@ Blitter::Blitter(std::unique_ptr<vpu::mem::Memory>& memory)
 {
 }
 
-bool Blitter::submit(Command command, std::function<void()> completion_callback) {
-    if (state == State::WORKING) {
-        return false;
-    }
+bool Blitter::submit() {
+    assert(working_command.operation != Operation::NONE);
 
-    assert(command.operation != Operation::NONE);
-
-    state = State::WORKING;
-    work_cycle = vpu::defs::get_next_global_cycle();
-    working_command = command;
-    working_callback = completion_callback;
     if (working_command.operation == Operation::CLEAR){
         working_command.xpos = 0;
         working_command.ypos = 0;

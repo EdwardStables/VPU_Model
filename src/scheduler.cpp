@@ -159,7 +159,7 @@ void Scheduler::check_blitter() {
 
     //Blitter can accept data
     std::function<void()> callback = std::bind(&Scheduler::blitter_complete, this);
-    if (blitter.submit(blitter_frontend_queue.front().data, callback)){
+    if (blitter.base_submit(blitter_frontend_queue.front().data, callback)){
         blitter_frontend_queue.pop_front();
         return;
     }
@@ -179,7 +179,7 @@ void Scheduler::check_dma() {
 
     //DMA can accept data
     std::function<void()> callback = std::bind(&Scheduler::dma_complete, this);
-    if (dma.submit(dma_frontend_queue.front().data, callback)){
+    if (dma.base_submit(dma_frontend_queue.front().data, callback)){
         dma_frontend_queue.pop_front();
         return;
     }

@@ -100,8 +100,8 @@ class System {
     void run_cycle() {
         core.run_cycle();
         scheduler.run_cycle();
-        dma.run_cycle();
-        blitter.run_cycle();
+        dma.base_run_cycle();
+        blitter.base_run_cycle();
     }
 
     bool wait_for_signal(uint32_t pc) {
