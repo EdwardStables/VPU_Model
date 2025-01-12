@@ -9,6 +9,7 @@
 #include "manager_core.h"
 #include "scheduler.h"
 #include "dma.h"
+#include "stream_renderer.h"
 
 #include "debug.h"
 
@@ -27,6 +28,7 @@ class System {
     std::unique_ptr<mem::Memory> memory;
     dma::DMA dma;
     blit::Blitter blitter;
+    stream::StreamRenderer renderer;
     Scheduler scheduler;
     ManagerCore core;
 
@@ -102,6 +104,7 @@ class System {
         scheduler.run_cycle();
         dma.base_run_cycle();
         blitter.base_run_cycle();
+        renderer.base_run_cycle();
     }
 
     bool wait_for_signal(uint32_t pc) {
@@ -186,7 +189,8 @@ public:
         memory(std::make_unique<vpu::mem::Memory>()),
         dma(memory),
         blitter(memory),
-        scheduler(dma, blitter),
+        renderer(memory),
+        scheduler(dma, blitter, renderer),
         core(this->config, memory, scheduler),
         debug(config.input_file)
 #ifdef RPC

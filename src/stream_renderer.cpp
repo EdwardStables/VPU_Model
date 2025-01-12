@@ -22,8 +22,8 @@ StreamRenderer::StreamRenderer(std::unique_ptr<vpu::mem::Memory>& memory)
 
 }
 
-bool StreamRenderer::submit(Command command, std::function<void()> completion_callback) {
-    assert(command.operation == Operation::RENDER);
+bool StreamRenderer::submit() {
+    assert(working_command.operation == Operation::RENDER);
     return true;
 }
 
@@ -277,10 +277,10 @@ void StreamRenderer::render_cycle_submit_voxel() {
 
 void StreamRenderer::write_queue() {
     if (output_queue.size() == 0) return;
-    if (!output_queue.back().can_run()) return;
+    if (!output_queue.front().can_run()) return;
 
-    auto [address, pixel] = output_queue.back().data;
-    output_queue.pop_back();
+    auto [address, pixel] = output_queue.front().data;
+    output_queue.pop_front();
 
     //This isn't a practical approach, just enough for getting it to work
     memory->write_word(address+0, 0xFF & (pixel >> 0));

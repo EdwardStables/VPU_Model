@@ -157,7 +157,7 @@ class StreamRenderer : public Subsystem<Command> {
 
 public:
     StreamRenderer(std::unique_ptr<vpu::mem::Memory>& memory);
-    virtual bool submit(Command command, std::function<void()> completion_callback);
+    virtual bool submit();
     virtual void run_cycle();
 };
 

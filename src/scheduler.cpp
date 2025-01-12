@@ -5,8 +5,8 @@
 
 namespace vpu {
 
-Scheduler::Scheduler(dma::DMA& dma, blit::Blitter& blitter)
-    : dma(dma), blitter(blitter)
+Scheduler::Scheduler(dma::DMA& dma, blit::Blitter& blitter, stream::StreamRenderer& renderer)
+    : dma(dma), blitter(blitter), renderer(renderer)
 {
  
 }
@@ -119,6 +119,23 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
     return true;
 }
 
+bool Scheduler::submit_renderer(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
+    switch(opcode) {
+        default: assert(false); //not actually implemented any opcodes yet
+    }
+
+    if (renderer_frontend_queue.size() >= vpu::defs::SCHEDULER_FRONTEND_QUEUE_SIZE) {
+        return false;
+    }
+
+    //When there is space, copy the frontend into the queue
+    renderer_frontend_queue.push_back(core_renderer_frontend_state);
+    renderer_outstanding++;
+    core_renderer_frontend_state.operation = stream::Operation::NONE;
+
+    return true;
+}
+
 void Scheduler::blitter_complete() {
     assert(blitter_outstanding > 0);
     blitter_outstanding--;
@@ -127,6 +144,11 @@ void Scheduler::blitter_complete() {
 void Scheduler::dma_complete() {
     assert(dma_outstanding > 0);
     dma_outstanding--;
+}
+
+void Scheduler::renderer_complete() {
+    assert(renderer_outstanding > 0);
+    renderer_outstanding--;
 }
 
 bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
@@ -146,49 +168,9 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
 }
 
 void Scheduler::run_cycle() {
-    check_dma();
-    check_blitter();
-}
-
-void Scheduler::check_blitter() {
-    //*** Blitter ***//
-    //Nothing there
-    if (!blitter_frontend_queue.size()) return;
-    //Can't run yet
-    if (!blitter_frontend_queue.front().can_run()) return;
-
-    //Blitter can accept data
-    std::function<void()> callback = std::bind(&Scheduler::blitter_complete, this);
-    if (blitter.base_submit(blitter_frontend_queue.front().data, callback)){
-        blitter_frontend_queue.pop_front();
-        return;
-    }
-
-    //Otherwise it couldn't accept, need to increment all the valid cycles in the queue
-    for (auto& cmd : blitter_frontend_queue){
-        cmd.increment();
-    }
-}
-
-void Scheduler::check_dma() {
-    //*** DMA ***//
-    //Nothing there
-    if (!dma_frontend_queue.size()) return;
-    //Can't run yet
-    if (!dma_frontend_queue.front().can_run()) return;
-
-    //DMA can accept data
-    std::function<void()> callback = std::bind(&Scheduler::dma_complete, this);
-    if (dma.base_submit(dma_frontend_queue.front().data, callback)){
-        dma_frontend_queue.pop_front();
-        return;
-    }
-
-    //Otherwise it couldn't accept, need to increment all the valid cycles in the queue
-    for (auto& cmd : dma_frontend_queue){
-        cmd.increment();
-    }
-
+    check_pipeline<dma::Command>(dma, core_dma_frontend_state, dma_frontend_queue, std::bind(&Scheduler::dma_complete, this));
+    check_pipeline<blit::Command>(blitter, core_blitter_frontend_state, blitter_frontend_queue, std::bind(&Scheduler::blitter_complete, this));
+    check_pipeline<stream::Command>(renderer, core_renderer_frontend_state, renderer_frontend_queue, std::bind(&Scheduler::renderer_complete, this));
 }
 
 }

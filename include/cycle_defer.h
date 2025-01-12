@@ -1,3 +1,5 @@
+#pragma once
+
 #include <assert.h>
 
 #include "defs_pkg.h"
