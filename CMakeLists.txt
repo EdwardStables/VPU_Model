@@ -24,6 +24,7 @@ add_executable(vpu
     src/dma.cpp
     src/scheduler.cpp
     src/blitter.cpp
+    src/stream_renderer.cpp
     src/rpc_interface.cpp
     src/debug.cpp
     src/stb.cpp
