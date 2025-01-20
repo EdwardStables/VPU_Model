@@ -31,7 +31,7 @@ def run_program(isa, request, clean, release):
         dump_framebuffer.mkdir()
     assert inp.exists()
 
-    program = Program(inp, isa)
+    program = Program(inp, isa, [])
     program.write_out(Path(bin),False)
     assert bin.exists()
 

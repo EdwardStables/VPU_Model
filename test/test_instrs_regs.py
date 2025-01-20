@@ -15,12 +15,12 @@ TEST_FILES = [
 def expected_registers(request):
     prog = request.param
     expected = {
-        "nops" :         RegState(0x1c,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
-        "branch" :       RegState(0x30, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
-        "inc" :          RegState(0x1c, 11,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
-        "jump" :         RegState(0x28, 23,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
-        "left_shifts" :  RegState(0x30,  4,  2, 4, 0, 0, 0, 0, 0, 2, 0x100000, 0),
-        "right_shifts" : RegState(0x50,  4,  1, 4, 1, 4, 0, 0, 0, 1, 0x100000, 0),
+        "nops" :         RegState(0x24,  0,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "branch" :       RegState(0x38, 10, 10, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "inc" :          RegState(0x24, 11,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "jump" :         RegState(0x30, 23,  0, 0, 0, 0, 0, 0, 0, 0, 0x100000, 0),
+        "left_shifts" :  RegState(0x38,  4,  2, 4, 0, 0, 0, 0, 0, 2, 0x100000, 0),
+        "right_shifts" : RegState(0x58,  4,  1, 4, 1, 4, 0, 0, 0, 1, 0x100000, 0),
     }
     assert prog in expected
     yield expected[prog]
@@ -53,4 +53,4 @@ def test_load(run_program, actual_memory, actual_registers):
     for i in range(10):
         assert actual_memory[base+(4*i)] == i+1
 
-    assert actual_registers == RegState(0x7c, 55, 36, 55, 36, 10, 0, 0, 0, 0, 0x100000, 0)
+    assert actual_registers == RegState(0x84, 55, 36, 55, 36, 10, 0, 0, 0, 0, 0x100000, 0)
