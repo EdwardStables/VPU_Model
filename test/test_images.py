@@ -1,13 +1,12 @@
 import pytest
-from pathlib import Path
-from util import RegState
-from PIL import Image, ImageFile, ImageChops
+from PIL import ImageChops
+from util import get_param
 
 def params():
     progs = [
         "blitter_text"
     ]
-    return [((p,False,False,True), p, "frames_" + p) for p in progs]
+    return [(get_param(p,framebuffer=True), p, "frames_" + p) for p in progs]
 
 @pytest.mark.parametrize("run_program, reference_images, output_images", params(), indirect=True)
 def test_framebuffer_output(run_program, reference_images, output_images):

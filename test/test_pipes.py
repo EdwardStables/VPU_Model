@@ -1,14 +1,8 @@
 import pytest
-from pathlib import Path
-from util import RegState
-
-TEST_FILES = [
-    "dma_copy",
-    "dma_set",
-]
+from util import get_param
 
 def params(prog):
-    return [((prog,False,True,False),prog)]
+    return [(get_param(prog,mem=True),prog)]
 
 @pytest.mark.parametrize("run_program, actual_memory", params("dma_set"), indirect=True)
 def test_dma_set(run_program,actual_memory):

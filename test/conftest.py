@@ -19,7 +19,7 @@ def isa():
 
 @pytest.fixture
 def run_program(isa, request, clean, release):
-    prog, regs, mem, framebuffer = request.param
+    prog, regs, mem, framebuffer, blob_files = request.param
     inp = PROGS / (prog + ".asm")
     bin = BINS / (prog + ".out")
     dump_reg = DUMP / (prog + ".reg")
@@ -31,7 +31,15 @@ def run_program(isa, request, clean, release):
         dump_framebuffer.mkdir()
     assert inp.exists()
 
-    program = Program(inp, isa, [])
+    blob_names = []
+    if blob_files:
+        blob_names = [DUMP/f"{prog}_{i}.blob" for i in range(len(blob_files))]
+        for bn,content in zip(blob_names,blob_files):
+            with bn.open("wb") as f:
+                f.write(content)
+
+
+    program = Program(inp, isa, blob_files)
     program.write_out(Path(bin),False)
     assert bin.exists()
 
@@ -59,6 +67,8 @@ def run_program(isa, request, clean, release):
         Path(bin).unlink()
         dump_reg.unlink(missing_ok=True)
         dump_mem.unlink(missing_ok=True)
+        for bn in blob_names:
+            bn.unlink(missing_ok=True)
     #Remove directories if feature flag enabled
     if clean and framebuffer:
         for file in dump_framebuffer.iterdir():
@@ -100,10 +110,10 @@ def actual_registers(request):
 def actual_memory(request):
     prog = request.param
     dump = DUMP / (prog + ".mem")
-    v = {}
     with dump.open('rb') as f:
         data = f.read()
     yield data
+
 
 def pytest_addoption(parser):
     parser.addoption("--no_clean", action="store_true")

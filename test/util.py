@@ -13,3 +13,6 @@ class RegState:
     R8: int
     SP: int
     RA: int
+
+def get_param(prog: str, regs=False, mem=False, framebuffer = False, blob_content = []):
+    return (prog, regs, mem, framebuffer, blob_content)
