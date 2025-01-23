@@ -114,6 +114,7 @@ class ManagerCore {
     void write_framebuffer();
 
     uint32_t get_int_literal(uint32_t instruction);
+    uint32_t get_blob_literal(uint32_t instruction);
 
     //Status printing
     std::string status_fetch_opcode;

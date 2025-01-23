@@ -164,7 +164,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::STW_R_R:
         case vpu::defs::STW_R_I:
             break;
-        //Immediate 24-bit
+        //ACC dest
         case vpu::defs::MOV_I:
         case vpu::defs::ADD_I:
         case vpu::defs::ADD_R:
@@ -182,6 +182,7 @@ void ManagerCore::stage_decode(bool stall) {
         //Register destination
         case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
+        case vpu::defs::LBA_R_B:
             decode_dest = vpu::defs::get_register(input.instruction,0);
             break;
         //Pipes
@@ -224,6 +225,9 @@ void ManagerCore::stage_decode(bool stall) {
         //Register destination
         case vpu::defs::MOV_R_I:
             decode_source0 = get_int_literal(input.instruction);
+            break;
+        case vpu::defs::LBA_R_B:
+            decode_source0 = get_blob_literal(input.instruction);
             break;
         case vpu::defs::CMP_R:
         case vpu::defs::ADD_R:
@@ -286,6 +290,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::MOV_R_R:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
+        case vpu::defs::LBA_R_B:
             break;
         case vpu::defs::STW_R:
         case vpu::defs::LDW_R:
@@ -382,6 +387,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::MOV_R_I:
         case vpu::defs::JMP_L:
         case vpu::defs::BRA_L:
+        case vpu::defs::LBA_R_B:
             source_value0 = input.source0;
             break;
         case vpu::defs::CMP_R:
@@ -447,6 +453,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::LDW_R:
         case vpu::defs::LDW_R_I:
         case vpu::defs::STW_R_I:
+        case vpu::defs::LBA_R_B:
             source_value1 = input.source1;
             break;
         //applied to ACC
@@ -511,6 +518,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::MOV_R_I:
         case vpu::defs::MOV_R_R:
         case vpu::defs::MOV_I:
+        case vpu::defs::LBA_R_B:
             memory_reg_index = input.dest;
             memory_reg_value = source_value0;
             break;
@@ -812,6 +820,10 @@ uint32_t ManagerCore::get_int_literal(uint32_t instruction) {
     uint32_t index = instruction & 0x0000FFFF;
 
     return memory->read_word(vpu::defs::LITERAL_TABLE_ADDR + (4*index));
+}
+
+uint32_t ManagerCore::get_blob_literal(uint32_t instruction) {
+    return memory->read_word(instruction & 0x0000FFFF);
 }
 
 }
