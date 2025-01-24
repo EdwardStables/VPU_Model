@@ -11,7 +11,7 @@ StreamByte::Type StreamByte::type() {
 
 uint8_t StreamByte::length() {
     switch(type()){
-        case Type::Length: return (0x1F&data)+1;
+        case Type::Length: return (0x3F&data)+1;
         case Type::Mask: return 7;
         default: assert(false);
     }
@@ -175,7 +175,7 @@ void StreamRenderer::render_cycle_data_fetch() {
                                      processed_byte_count;
 
     //We should be cacheline aligned for all transactions excluding the first
-    assert(processed_byte_count == 0 || (next_stream_byte_addr & ~uint32_t(0x3F) == 0));
+    assert(processed_byte_count == 0 || (next_stream_byte_addr & 0x3F) == 0);
     //For the initial implementation we only refill once exhausted
     assert(memory_return_valid == false);
 
@@ -193,7 +193,7 @@ void StreamRenderer::render_cycle_process_byte() {
     
     //This is starting a new voxel
     if (byte_voxel_count == 0) {
-        active_byte = {memory_return.data[internal_buffer_offset+processed_byte_count]};
+        active_byte = {memory_return.data[internal_buffer_offset]};
     }
 
     bool advance_byte = false;
@@ -241,8 +241,9 @@ void StreamRenderer::render_cycle_process_byte() {
         //Increment the index, invalidate data once all consumed
         //TODO: overlap request on this cycle, or implement double buffering
         processed_byte_count++;
+        internal_buffer_offset++;
         byte_voxel_count = 0;
-        if (internal_buffer_offset+processed_byte_count >= vpu::defs::MEM_ACCESS_WIDTH) memory_return_valid = false;
+        if (internal_buffer_offset >= vpu::defs::MEM_ACCESS_WIDTH) memory_return_valid = false;
     }
 }
 
@@ -284,7 +285,7 @@ void StreamRenderer::render_cycle_submit_voxel() {
         return;
     }
 
-    uint32_t address = vpu::blit::Blitter::pixel_address(next_to_render.x, next_to_render.y);
+    uint32_t address = vpu::blit::Blitter::pixel_address(next_to_render.x, 60-next_to_render.z);
     output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));
 }
 
