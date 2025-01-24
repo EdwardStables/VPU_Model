@@ -114,7 +114,8 @@ struct Command {
 enum class RenderState {
     IDLE,
     STREAM_FETCH,
-    RENDER
+    RENDER,
+    DRAIN
 };
 
 class StreamRenderer : public Subsystem<Command> {
@@ -136,7 +137,9 @@ class StreamRenderer : public Subsystem<Command> {
     uint32_t internal_buffer_offset = 0;
     uint32_t byte_voxel_count = 0;
     Voxel next_to_render;
-    std::deque<Defer<std::pair<uint32_t,uint32_t>>> output_queue;
+    
+    using q_entry = std::pair<uint32_t,uint32_t>;
+    std::deque<Defer<q_entry>> output_queue;
     //bit of a bodge; account for limited writeback width
     //when we can't unify data and would have to stall pipeline.
     //This value will need a little more refinement

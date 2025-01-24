@@ -27,11 +27,13 @@ struct Command {
 class Blitter : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;
     uint8_t char_mask(uint8_t character, uint8_t vscan);
-    uint32_t pixel_address(uint32_t x, uint32_t y);
     void pixel_cycle();
     void string_cycle();
     void clear_cycle();
 public:
+    //Utility also used in other pipelines
+    static uint32_t pixel_address(uint32_t x, uint32_t y);
+
     Blitter(std::unique_ptr<vpu::mem::Memory>& memory);
     virtual bool submit();
     virtual void run_cycle();

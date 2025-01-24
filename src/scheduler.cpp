@@ -51,7 +51,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
 bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
         case vpu::defs::P_SCH_FNC:
-            return (dma_outstanding==0) && (blitter_outstanding==0);
+            return (dma_outstanding==0) && (blitter_outstanding==0) && (renderer_outstanding==0);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " in sched pipe. ";
@@ -121,6 +121,12 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
 
 bool Scheduler::submit_renderer(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
+        case vpu::defs::P_REN_STR_R:
+            core_renderer_frontend_state.stream_address = val1;
+            core_renderer_frontend_state.start_offset = 0;
+            core_renderer_frontend_state.end_offset = 0xFFFFFFFF;
+            core_renderer_frontend_state.operation = vpu::stream::Operation::RENDER;
+            break;
         default: assert(false); //not actually implemented any opcodes yet
     }
 
@@ -160,6 +166,8 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
             return submit_sched(valid_cycle, opcode, val1, val2);
         case vpu::defs::BLITTER:
             return submit_blitter(valid_cycle, opcode, val1, val2);
+        case vpu::defs::STREAM_RENDERER:
+            return submit_renderer(valid_cycle, opcode, val1, val2);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " No implementation for pipe " << pipe << " ";

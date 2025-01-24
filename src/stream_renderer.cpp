@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include "stream_renderer.h"
+#include "blitter.h"
 
 namespace vpu::stream {
 
@@ -51,6 +52,16 @@ void StreamRenderer::start_render() {
 void StreamRenderer::run_cycle() {
     write_queue();
 
+    //Don't want to switch to a fetch again if we have things to write out
+    //Creates a bubble, but that's ok
+    if (render_state == RenderState::DRAIN) {
+        if (output_queue.size() == 0){
+            state = State::FINISHED;
+            render_state = RenderState::IDLE;
+        }
+        return;
+    }
+
     if (render_state == RenderState::IDLE){
         start_fetch();
     }
@@ -61,17 +72,14 @@ void StreamRenderer::run_cycle() {
         case RenderState::RENDER: render_cycle(); break;
     }
 
-    if (render_state == RenderState::IDLE && output_queue.size() == 0){
-        state = State::FINISHED;
-    }
 }
 
 void StreamRenderer::stream_fetch_cycle() {
     //We don't have data, so fetch
     if (memory_return_valid == false) {
-        memory_request_head = working_command.stream_address && 0x3F;
+        memory_request_head = working_command.stream_address & ~uint32_t(0x3F);
         //defer to next cycle
-        memory_return = memory->read(working_command.stream_address);
+        memory_return = memory->read(memory_request_head);
         memory_return_valid = true;
         return;
     }
@@ -87,10 +95,9 @@ void StreamRenderer::stream_fetch_cycle() {
         stream_got_bytes < stream_header_bytes &&    //Stop iteration if we have all the data
         request_offset < vpu::defs::MEM_ACCESS_WIDTH //Stop iteration if we are crossing cachelines
     ) {
-        update_active_stream(stream_got_bytes+1, memory_return.data[request_offset]);
+        update_active_stream(stream_got_bytes, memory_return.data[request_offset]);
         stream_got_bytes++;
         request_offset += 1;
-        request_offset = next_header_byte_addr - memory_request_head;
     }
 
     if (stream_got_bytes == stream_header_bytes) {
@@ -155,9 +162,10 @@ void StreamRenderer::render_cycle() {
 }
 
 void StreamRenderer::render_cycle_data_fetch() {
-    //Done rendering this portion
-    if (processed_byte_count + working_command.start_offset >= working_command.end_offset) {
-        render_state = RenderState::IDLE;
+    //Done rendering this portion, or the entire stream
+    if (processed_byte_count + working_command.start_offset >= working_command.end_offset ||
+        processed_byte_count >= active_stream.byte_count) {
+        render_state = RenderState::DRAIN;
         return;
     }
 
@@ -167,16 +175,16 @@ void StreamRenderer::render_cycle_data_fetch() {
                                      processed_byte_count;
 
     //We should be cacheline aligned for all transactions excluding the first
-    assert(processed_byte_count == 0 || (next_stream_byte_addr & 0x3F == 0));
+    assert(processed_byte_count == 0 || (next_stream_byte_addr & ~uint32_t(0x3F) == 0));
     //For the initial implementation we only refill once exhausted
     assert(memory_return_valid == false);
 
-    memory_request_head = next_stream_byte_addr && 0x3F;
+    memory_request_head = next_stream_byte_addr & ~uint32_t(0x3F);
     memory_return_valid = true;
     internal_buffer_offset = next_stream_byte_addr - memory_request_head;
 
     //defer to next cycle
-    memory_return = memory->read(working_command.stream_address);
+    memory_return = memory->read(memory_request_head);
 }
 
 void StreamRenderer::render_cycle_process_byte() {
@@ -260,6 +268,10 @@ void StreamRenderer::render_cycle_advance(uint8_t count) {
             next_to_render.z = next_z;
             continue;
         }
+
+        //Gotten to the end of z, must be done
+        render_state = RenderState::DRAIN;
+        break;
     }
 }
 
@@ -272,7 +284,8 @@ void StreamRenderer::render_cycle_submit_voxel() {
         return;
     }
 
-    //TODO actually render stuff :kekw:
+    uint32_t address = vpu::blit::Blitter::pixel_address(next_to_render.x, next_to_render.y);
+    output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));
 }
 
 void StreamRenderer::write_queue() {
@@ -282,11 +295,7 @@ void StreamRenderer::write_queue() {
     auto [address, pixel] = output_queue.front().data;
     output_queue.pop_front();
 
-    //This isn't a practical approach, just enough for getting it to work
-    memory->write_word(address+0, 0xFF & (pixel >> 0));
-    memory->write_word(address+1, 0xFF & (pixel >> 8));
-    memory->write_word(address+2, 0xFF & (pixel >> 16));
-    memory->write_word(address+3, 0xFF & (pixel >> 24));
+    memory->write_word(address, pixel);
 }
 
 }
