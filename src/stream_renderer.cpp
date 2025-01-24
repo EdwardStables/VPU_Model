@@ -11,7 +11,7 @@ StreamByte::Type StreamByte::type() {
 
 uint8_t StreamByte::length() {
     switch(type()){
-        case Type::Length: return (0x1F&data);
+        case Type::Length: return (0x1F&data)+1;
         case Type::Mask: return 7;
         default: assert(false);
     }
