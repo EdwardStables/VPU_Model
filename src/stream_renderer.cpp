@@ -29,24 +29,29 @@ bool StreamRenderer::submit() {
 }
 
 void StreamRenderer::start_fetch() {
-    render_state = RenderState::STREAM_FETCH;
+    render_state = RenderState::DATA_FETCH;
 
+    transformation.valid = false;
+    stream_fetch_complete = false;
+
+    reset_fetch();
+}
+
+void StreamRenderer::reset_fetch() {
     memory_return_valid = false;
     memory_request_head = 0;
-
-    stream_got_bytes = 0;
+    request_got_bytes = 0;
 }
 
 void StreamRenderer::start_render() {
     render_state = RenderState::RENDER;
 
-    memory_return_valid = false;
-    memory_request_head = 0;
-
     processed_byte_count = 0;
     internal_buffer_offset = 0;
     byte_voxel_count = 0;
     next_to_render = active_stream.start;
+
+    reset_fetch();
 }
 
 void StreamRenderer::run_cycle() {
@@ -68,16 +73,40 @@ void StreamRenderer::run_cycle() {
 
     switch(render_state) {
         case RenderState::IDLE: assert(false); break;
-        case RenderState::STREAM_FETCH: stream_fetch_cycle(); break;
+        case RenderState::DATA_FETCH: data_fetch_cycle(); break;
         case RenderState::RENDER: render_cycle(); break;
     }
 
 }
 
-void StreamRenderer::stream_fetch_cycle() {
+//Runs the operations serially, good enough for current modeling requirements
+void StreamRenderer::data_fetch_cycle() {
+    if (!stream_fetch_complete) {
+        data_fetch_cycle_request(working_command.stream_address, STREAM_HEADER_BYTES, &StreamRenderer::update_active_stream);
+        if (request_got_bytes == STREAM_HEADER_BYTES) {
+            reset_fetch();
+            stream_fetch_complete = true;
+        }
+        return;
+    }
+        
+    if (false) //don't run this for now
+    if (!transformation.valid) {
+        data_fetch_cycle_request(working_command.transformation_matrix_address, TRANSFORM_BYTES, &StreamRenderer::update_transform);
+        if (request_got_bytes == TRANSFORM_BYTES) {
+            reset_fetch();
+            transformation.valid = true;
+        }
+        return;
+    }
+
+    start_render();
+}
+
+void StreamRenderer::data_fetch_cycle_request(const uint32_t base_address, const uint32_t total_bytes, update_callback update) {
     //We don't have data, so fetch
     if (memory_return_valid == false) {
-        memory_request_head = working_command.stream_address & ~uint32_t(0x3F);
+        memory_request_head = base_address & ~uint32_t(0x3F);
         //defer to next cycle
         memory_return = memory->read(memory_request_head);
         memory_return_valid = true;
@@ -88,23 +117,21 @@ void StreamRenderer::stream_fetch_cycle() {
     if (!memory_return.can_run()) return;
 
     //At this point we have the stream data
-    uint32_t next_header_byte_addr = working_command.stream_address + stream_got_bytes;
+    uint32_t next_header_byte_addr = base_address + request_got_bytes;
     uint32_t request_offset = next_header_byte_addr - memory_request_head;
     
     while (
-        stream_got_bytes < stream_header_bytes &&    //Stop iteration if we have all the data
+        request_got_bytes < STREAM_HEADER_BYTES &&    //Stop iteration if we have all the data
         request_offset < vpu::defs::MEM_ACCESS_WIDTH //Stop iteration if we are crossing cachelines
     ) {
-        update_active_stream(stream_got_bytes, memory_return.data[request_offset]);
-        stream_got_bytes++;
+        update(this, request_got_bytes, memory_return.data[request_offset]);
+        request_got_bytes++;
         request_offset += 1;
     }
 
-    if (stream_got_bytes == stream_header_bytes) {
-        start_render();
+    if (request_got_bytes == total_bytes) {
         return;
     }
-
 
     //It will be the next cacheline
     memory_request_head += vpu::defs::MEM_ACCESS_WIDTH;
@@ -143,6 +170,18 @@ void StreamRenderer::update_active_stream(uint32_t header_index, uint8_t byte) {
     }
 }
 
+void StreamRenderer::update_transform(uint32_t byte_index, uint8_t byte) {
+    bool upper = 0x1 & byte_index;
+    uint32_t index = byte_index / 2;
+    uint32_t row = index / 4;
+    uint32_t col = index % 4;
+    uint16_t v = transformation.mat[row][col];
+    uint16_t nv = byte;
+    v |= upper ? 0xFF00 : 0x00FF;
+    v &= upper ? nv << 8 : nv;
+    transformation.mat[row][col] = v;
+}
+
 void StreamRenderer::render_cycle() {
     /*
     This current setup is inefficient, memory reads are only triggered once
@@ -170,7 +209,7 @@ void StreamRenderer::render_cycle_data_fetch() {
     }
 
     uint32_t next_stream_byte_addr = working_command.stream_address +
-                                     stream_header_bytes +
+                                     STREAM_HEADER_BYTES +
                                      working_command.start_offset +
                                      processed_byte_count;
 
@@ -284,6 +323,8 @@ void StreamRenderer::render_cycle_submit_voxel() {
     ) {
         return;
     }
+
+
 
     uint32_t address = vpu::blit::Blitter::pixel_address(next_to_render.x, 60-next_to_render.z);
     output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));

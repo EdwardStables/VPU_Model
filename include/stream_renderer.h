@@ -85,8 +85,9 @@ struct Stream {
     uint32_t byte_count;
     std::vector<StreamByte> stream;
 };
-const uint32_t voxel_bytes = 12;
-const uint32_t stream_header_bytes = (2*voxel_bytes) + 4;
+const uint32_t VOXEL_BYTES = 12;
+const uint32_t STREAM_HEADER_BYTES = (2*VOXEL_BYTES) + 4;
+const uint32_t TRANSFORM_BYTES = 16*2;
 
 /*
 Stream Renderer:
@@ -108,12 +109,19 @@ struct Command {
     uint32_t stream_address; //Where to fetch the stream from
     uint32_t start_offset;   //Internal byte offset to render from
     uint32_t end_offset;     //Internal byte offset to stop rendering at (exclusive)
+    uint32_t transformation_matrix_address;
     Operation operation = Operation::NONE;
+};
+
+struct TransformationCache {
+    uint32_t current_address;
+    bool valid = false;
+    uint16_t mat[4][4];
 };
 
 enum class RenderState {
     IDLE,
-    STREAM_FETCH,
+    DATA_FETCH,
     RENDER,
     DRAIN
 };
@@ -129,7 +137,10 @@ class StreamRenderer : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;
 
     //Fetch specific variables
-    uint32_t stream_got_bytes = 0;
+    uint32_t request_got_bytes = 0;
+    bool stream_fetch_complete = false;
+    //Transformation for this object
+    TransformationCache transformation;
 
     //Render specific variables
     StreamByte active_byte;
@@ -137,7 +148,7 @@ class StreamRenderer : public Subsystem<Command> {
     uint32_t internal_buffer_offset = 0;
     uint32_t byte_voxel_count = 0;
     Voxel next_to_render;
-    
+
     using q_entry = std::pair<uint32_t,uint32_t>;
     std::deque<Defer<q_entry>> output_queue;
     //bit of a bodge; account for limited writeback width
@@ -146,11 +157,17 @@ class StreamRenderer : public Subsystem<Command> {
     const int max_queue_len = 32;
 
     void start_fetch();
+    void reset_fetch();
     void start_render();
     void write_queue();
 
-    void stream_fetch_cycle();
+    //TODO: This will need better modeling with a memory interface
+    //Currently not considering any kind of subrequestor/interface contention
+    void data_fetch_cycle();
+    using update_callback = std::function<void(StreamRenderer*,uint32_t,uint8_t)>;
+    void data_fetch_cycle_request(const uint32_t base_address, const uint32_t total_bytes, update_callback);
     void update_active_stream(uint32_t header_index, uint8_t byte);
+    void update_transform(uint32_t byte_index, uint8_t byte);
     
     void render_cycle();
     void render_cycle_data_fetch();
