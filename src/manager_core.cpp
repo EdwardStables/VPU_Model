@@ -202,6 +202,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
+        case vpu::defs::P_REN_TRN_R:
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
@@ -274,6 +275,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_REN_STR_R:
+        case vpu::defs::P_REN_TRN_R:
             decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         default:
@@ -335,6 +337,7 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
+        case vpu::defs::P_REN_TRN_R:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
@@ -432,6 +435,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_REN_STR_R:
+        case vpu::defs::P_REN_TRN_R:
             source_value0 = execute_feedback_reg_held[input.source0] ?
                                     execute_feedback_reg_value[input.source0] :
                                     registers[input.source0];
@@ -490,6 +494,7 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_SPC_I:
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
+        case vpu::defs::P_REN_TRN_R:
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:

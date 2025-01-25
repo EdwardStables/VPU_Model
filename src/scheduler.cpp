@@ -121,6 +121,9 @@ bool Scheduler::submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32
 
 bool Scheduler::submit_renderer(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
+        case vpu::defs::P_REN_TRN_R:
+            core_renderer_frontend_state.transformation_matrix_address = val1;
+            return true;
         case vpu::defs::P_REN_STR_R:
             core_renderer_frontend_state.stream_address = val1;
             core_renderer_frontend_state.start_offset = 0;

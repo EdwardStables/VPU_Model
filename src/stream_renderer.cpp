@@ -174,11 +174,13 @@ void StreamRenderer::update_transform(uint32_t byte_index, uint8_t byte) {
     uint32_t index = byte_index / 2;
     uint32_t row = index / 4;
     uint32_t col = index % 4;
-    uint16_t v = transformation.mat[row][col];
-    uint16_t nv = byte;
-    v |= upper ? 0xFF00 : 0x00FF;
-    v &= upper ? nv << 8 : nv;
-    transformation.mat[row][col] = v;
+    
+    //lower always comes first
+    if (!upper) {
+        transformation.mat[row][col] = byte;
+    } else {
+        transformation.mat[row][col] |= byte << 8;
+    }
 }
 
 void StreamRenderer::render_cycle() {
@@ -322,10 +324,27 @@ void StreamRenderer::render_cycle_submit_voxel() {
     ) {
         return;
     }
+    
+    //Scale to account for fixed point
+    uint32_t x = next_to_render.x << 4;
+    uint32_t y = next_to_render.y << 4;
+    uint32_t z = next_to_render.z << 4;
+    uint32_t w = 1 << 4; //implicit term
+    auto& m = transformation.mat;
 
+    uint32_t xpos = 0;
+    uint32_t ypos = 0;
 
+    //Apply transformation straight up to x and y
+    xpos = (m[0][0] * x) + (m[0][1] * y) + (m[0][2] * z) + (m[0][3] * w);
+    ypos = (m[1][0] * x) + (m[1][1] * y) + (m[1][2] * z) + (m[1][3] * w);
 
-    uint32_t address = vpu::blit::Blitter::pixel_address(next_to_render.x, 60-next_to_render.z);
+    // Scale back to integer land
+    xpos >>= 8;
+    ypos >>= 8;
+
+    if (xpos >= vpu::defs::FRAMEBUFFER_WIDTH || ypos >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
+    uint32_t address = vpu::blit::Blitter::pixel_address(xpos, ypos);
     output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));
 }
 
