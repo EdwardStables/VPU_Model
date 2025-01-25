@@ -90,7 +90,6 @@ void StreamRenderer::data_fetch_cycle() {
         return;
     }
         
-    if (false) //don't run this for now
     if (!transformation.valid) {
         data_fetch_cycle_request(working_command.transformation_matrix_address, TRANSFORM_BYTES, &StreamRenderer::update_transform);
         if (request_got_bytes == TRANSFORM_BYTES) {
@@ -121,7 +120,7 @@ void StreamRenderer::data_fetch_cycle_request(const uint32_t base_address, const
     uint32_t request_offset = next_header_byte_addr - memory_request_head;
     
     while (
-        request_got_bytes < STREAM_HEADER_BYTES &&    //Stop iteration if we have all the data
+        request_got_bytes < total_bytes && //Stop iteration if we have all the data
         request_offset < vpu::defs::MEM_ACCESS_WIDTH //Stop iteration if we are crossing cachelines
     ) {
         update(this, request_got_bytes, memory_return.data[request_offset]);
