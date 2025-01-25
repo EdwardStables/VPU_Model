@@ -326,25 +326,33 @@ void StreamRenderer::render_cycle_submit_voxel() {
     }
     
     //Scale to account for fixed point
-    uint32_t x = next_to_render.x << 4;
-    uint32_t y = next_to_render.y << 4;
-    uint32_t z = next_to_render.z << 4;
-    uint32_t w = 1 << 4; //implicit term
+    uint32_t x_in = next_to_render.x << 4;
+    uint32_t y_in = next_to_render.y << 4;
+    uint32_t z_in = next_to_render.z << 4;
+    uint32_t w_in = 1 << 4; //implicit term
     auto& m = transformation.mat;
 
-    uint32_t xpos = 0;
-    uint32_t ypos = 0;
-
     //Apply transformation straight up to x and y
-    xpos = (m[0][0] * x) + (m[0][1] * y) + (m[0][2] * z) + (m[0][3] * w);
-    ypos = (m[1][0] * x) + (m[1][1] * y) + (m[1][2] * z) + (m[1][3] * w);
+    uint32_t x = (m[0][0] * x_in) + (m[0][1] * y_in) + (m[0][2] * z_in) + (m[0][3] * w_in);
+    uint32_t y = (m[1][0] * x_in) + (m[1][1] * y_in) + (m[1][2] * z_in) + (m[1][3] * w_in);
+    uint32_t z = (m[2][0] * x_in) + (m[2][1] * y_in) + (m[2][2] * z_in) + (m[2][3] * w_in);
+    uint32_t w = (m[3][0] * x_in) + (m[3][1] * y_in) + (m[3][2] * z_in) + (m[3][3] * w_in);
 
-    // Scale back to integer land
-    xpos >>= 8;
-    ypos >>= 8;
+    // Scale back to 12.4 fixed point
+    x >>= 4;
+    y >>= 4;
+    z >>= 4;
+    w >>= 4;
 
-    if (xpos >= vpu::defs::FRAMEBUFFER_WIDTH || ypos >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
-    uint32_t address = vpu::blit::Blitter::pixel_address(xpos, ypos);
+    //Account for w-scaling, gives scaling factor of 1 as w and x/y/z have same scaling factor
+    //This performs both the desired scaling and converting back to integer representation
+    x /= w;
+    y /= w;
+    z /= w;
+    w = 0x0001;
+
+    if (x >= vpu::defs::FRAMEBUFFER_WIDTH || y >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
+    uint32_t address = vpu::blit::Blitter::pixel_address(x, y);
     output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));
 }
 
