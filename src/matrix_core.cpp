@@ -235,17 +235,16 @@ void Matrix::modify_cycle() {
     if (working_command.operation == Operation::SET_MAT) {
         offset += (working_command.row-1) * 4 * 2;
     }
-    uint32_t address = working_command.source1_addr + offset;
+    uint32_t address = working_command.dest_addr + offset;
 
     uint8_t mask;
-    uint8_t value;
+    uint32_t value = working_command.value;
 
     if (working_command.col % 2) { //1 and 3 are in lower bytes
         mask = 0x3;
-        value = working_command.value;
     } else { //2 and 4 are in upper bytes
         mask = 0xC;
-        value = working_command.value << 16;
+        value <<= 16;
     }
 
     memory->write_word_mask(address, value, mask);
