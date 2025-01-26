@@ -7,6 +7,7 @@
 #include "stream_renderer.h"
 #include "defs_pkg.h"
 #include "cycle_defer.h"
+#include "matrix_core.h"
 
 namespace vpu {
 
@@ -15,6 +16,7 @@ class Scheduler {
     dma::DMA& dma;
     blit::Blitter& blitter;
     stream::StreamRenderer& renderer;
+    matrix::Matrix& matrix;
 
     std::deque<std::tuple<
         uint32_t,    //valid cycle
@@ -31,6 +33,8 @@ class Scheduler {
     std::deque<Defer<blit::Command>> blitter_frontend_queue;
     stream::Command core_renderer_frontend_state;
     std::deque<Defer<stream::Command>> renderer_frontend_queue;
+    matrix::Command core_matrix_frontend_state;
+    std::deque<Defer<matrix::Command>> matrix_frontend_queue;
 
     //Outstanding request count
     uint32_t dma_outstanding = 0;
@@ -39,11 +43,14 @@ class Scheduler {
     void blitter_complete();
     uint32_t renderer_outstanding = 0;
     void renderer_complete();
+    uint32_t matrix_outstanding = 0;
+    void matrix_complete();
 
     bool submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
     bool submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
     bool submit_blitter(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
     bool submit_renderer(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
+    bool submit_matrix(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2);
 
     template <class C>
     void check_pipeline(Subsystem<C>& subsystem, C& command, std::deque<Defer<C>>& queue, std::function<void()> callback);
@@ -51,7 +58,8 @@ public:
     Scheduler(
         dma::DMA& dma,
         blit::Blitter& blitter,
-        stream::StreamRenderer& renderer
+        stream::StreamRenderer& renderer,
+        matrix::Matrix& matrix
     );
 
     //Submit an instruction to the scheduler

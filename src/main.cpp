@@ -10,6 +10,7 @@
 #include "scheduler.h"
 #include "dma.h"
 #include "stream_renderer.h"
+#include "matrix_core.h"
 
 #include "debug.h"
 
@@ -29,6 +30,7 @@ class System {
     dma::DMA dma;
     blit::Blitter blitter;
     stream::StreamRenderer renderer;
+    matrix::Matrix matrix;
     Scheduler scheduler;
     ManagerCore core;
 
@@ -190,7 +192,8 @@ public:
         dma(memory),
         blitter(memory),
         renderer(memory),
-        scheduler(dma, blitter, renderer),
+        matrix(memory),
+        scheduler(dma, blitter, renderer, matrix),
         core(this->config, memory, scheduler),
         debug(config.input_file)
 #ifdef RPC

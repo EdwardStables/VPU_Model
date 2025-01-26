@@ -203,6 +203,16 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
         case vpu::defs::P_REN_TRN_R:
+        case vpu::defs::P_MAT_SRC1_R_I:
+        case vpu::defs::P_MAT_SRC1_R_R:
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_SRC2_R_R:
+        case vpu::defs::P_MAT_DST_R_I:
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_ROW_I:
+        case vpu::defs::P_MAT_COL_R:
+        case vpu::defs::P_MAT_COL_I:
+        case vpu::defs::P_MAT_OPR_I:
             break;
         default:
             std::cerr << "Error decoding opcode " << vpu::defs::opcode_to_string(decode_opcode);
@@ -263,7 +273,12 @@ void ManagerCore::stage_decode(bool stall) {
         //I source
         case vpu::defs::P_BLI_COL_I:
         case vpu::defs::P_BLI_SPC_I:
+        case vpu::defs::P_MAT_ROW_I:
+        case vpu::defs::P_MAT_COL_I:
             decode_source0 = get_int_literal(input.instruction);
+            break;
+        case vpu::defs::P_MAT_OPR_I:
+            decode_source0 = vpu::defs::ACC; //take value in ACC
             break;
         //Register source
         case vpu::defs::P_DMA_DST_R:
@@ -276,6 +291,13 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SPC_R:
         case vpu::defs::P_REN_STR_R:
         case vpu::defs::P_REN_TRN_R:
+        case vpu::defs::P_MAT_SRC1_R_I:
+        case vpu::defs::P_MAT_SRC1_R_R:
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_SRC2_R_R:
+        case vpu::defs::P_MAT_DST_R_I:
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_COL_R:
             decode_source0 = (uint32_t)vpu::defs::get_register(input.instruction,0);
             break;
         default:
@@ -338,9 +360,21 @@ void ManagerCore::stage_decode(bool stall) {
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
         case vpu::defs::P_REN_TRN_R:
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_ROW_I:
+        case vpu::defs::P_MAT_COL_R:
+        case vpu::defs::P_MAT_COL_I:
+            break;
+        case vpu::defs::P_MAT_SRC1_R_I:
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_DST_R_I:
+        case vpu::defs::P_MAT_OPR_I:
+            decode_source2 = (uint32_t)get_int_literal(input.instruction);
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
+        case vpu::defs::P_MAT_SRC1_R_R:
+        case vpu::defs::P_MAT_SRC2_R_R:
             decode_source2 = (uint32_t)vpu::defs::get_register(input.instruction,1);
             break;
         default:
@@ -423,6 +457,8 @@ void ManagerCore::stage_execute() {
         //I
         case vpu::defs::P_BLI_COL_I:
         case vpu::defs::P_BLI_SPC_I:
+        case vpu::defs::P_MAT_ROW_I:
+        case vpu::defs::P_MAT_COL_I:
             source_value0 = input.source0;
             break;
         //Register
@@ -436,6 +472,14 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_SPS_R_R:
         case vpu::defs::P_REN_STR_R:
         case vpu::defs::P_REN_TRN_R:
+        case vpu::defs::P_MAT_SRC1_R_I:
+        case vpu::defs::P_MAT_SRC1_R_R:
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_SRC2_R_R:
+        case vpu::defs::P_MAT_DST_R_I:
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_COL_R:
+        case vpu::defs::P_MAT_OPR_I: //OPR gets ACC as a register
             source_value0 = execute_feedback_reg_held[input.source0] ?
                                     execute_feedback_reg_value[input.source0] :
                                     registers[input.source0];
@@ -495,9 +539,21 @@ void ManagerCore::stage_execute() {
         case vpu::defs::P_BLI_SWP:
         case vpu::defs::P_REN_STR_R:
         case vpu::defs::P_REN_TRN_R:
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_ROW_I:
+        case vpu::defs::P_MAT_COL_R:
+        case vpu::defs::P_MAT_COL_I:
+            break;
+        case vpu::defs::P_MAT_OPR_I:
+        case vpu::defs::P_MAT_DST_R_I:
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_SRC1_R_I:
+            source_value1 = input.source1;
             break;
         case vpu::defs::P_BLI_PIX_R_R:
         case vpu::defs::P_BLI_SPS_R_R:
+        case vpu::defs::P_MAT_SRC1_R_R:
+        case vpu::defs::P_MAT_SRC2_R_R:
             source_value1 = execute_feedback_reg_held[input.source1] ?
                                     execute_feedback_reg_value[input.source1] :
                                     registers[input.source1];

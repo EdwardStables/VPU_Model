@@ -5,8 +5,12 @@
 
 namespace vpu {
 
-Scheduler::Scheduler(dma::DMA& dma, blit::Blitter& blitter, stream::StreamRenderer& renderer)
-    : dma(dma), blitter(blitter), renderer(renderer)
+Scheduler::Scheduler(
+    dma::DMA& dma,
+    blit::Blitter& blitter,
+    stream::StreamRenderer& renderer,
+    matrix::Matrix& matrix
+) : dma(dma), blitter(blitter), renderer(renderer), matrix(matrix)
 {
  
 }
@@ -145,6 +149,47 @@ bool Scheduler::submit_renderer(uint32_t valid_cycle, defs::Opcode opcode, uint3
     return true;
 }
 
+bool Scheduler::submit_matrix(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
+    switch(opcode) {
+        case vpu::defs::P_MAT_SRC1_R_I:
+        case vpu::defs::P_MAT_SRC1_R_R:
+            core_matrix_frontend_state.source1_addr = val1 + val2;
+            return true;
+        case vpu::defs::P_MAT_SRC2_R_I:
+        case vpu::defs::P_MAT_SRC2_R_R:
+            core_matrix_frontend_state.source2_addr = val1 + val2;
+            return true;
+        case vpu::defs::P_MAT_DST_R_I:
+            core_matrix_frontend_state.dest_addr = val1 + val2;
+            return true;
+        case vpu::defs::P_MAT_ROW_R:
+        case vpu::defs::P_MAT_ROW_I:
+            core_matrix_frontend_state.row = val1;
+            return true;
+        case vpu::defs::P_MAT_COL_R:
+        case vpu::defs::P_MAT_COL_I:
+            core_matrix_frontend_state.col = val1;
+            return true;
+        case vpu::defs::P_MAT_OPR_I:
+            core_matrix_frontend_state.value = val1;
+            core_matrix_frontend_state.operation = matrix::Operation(val2);
+            break;
+        default:
+            assert(false);
+    }
+
+    if (matrix_frontend_queue.size() >= vpu::defs::SCHEDULER_FRONTEND_QUEUE_SIZE) {
+        return false;
+    }
+
+    //When there is space, copy the frontend into the queue
+    matrix_frontend_queue.push_back(core_matrix_frontend_state);
+    matrix_outstanding++;
+    core_matrix_frontend_state.operation = matrix::Operation::NONE;
+
+    return true;
+}
+
 void Scheduler::blitter_complete() {
     assert(blitter_outstanding > 0);
     blitter_outstanding--;
@@ -160,6 +205,11 @@ void Scheduler::renderer_complete() {
     renderer_outstanding--;
 }
 
+void Scheduler::matrix_complete() {
+    assert(matrix_outstanding > 0);
+    matrix_outstanding--;
+}
+
 bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     vpu::defs::Pipe pipe = vpu::defs::opcode_to_pipe(opcode);
     switch(pipe){
@@ -171,6 +221,8 @@ bool Scheduler::core_submit(uint32_t valid_cycle, defs::Opcode opcode, uint32_t 
             return submit_blitter(valid_cycle, opcode, val1, val2);
         case vpu::defs::STREAM_RENDERER:
             return submit_renderer(valid_cycle, opcode, val1, val2);
+        case vpu::defs::MATRIX:
+            return submit_matrix(valid_cycle, opcode, val1, val2);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " No implementation for pipe " << pipe << " ";
