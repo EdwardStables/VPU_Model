@@ -158,6 +158,29 @@ void DataRequestor::write_matrix(uint32_t address, Mat data) {
     memory->write_mask(head, ret, mask);
 }
 
+std::optional<std::pair<Vec,Mat>> DataRequestor::get_vector_matrix_pair(uint32_t address1, uint32_t address2) {
+    //Got the data already
+    bool one_ready = requested_vector1_valid && requested_vector1.can_run() && vector1_addr == address1;
+    bool two_ready = requested_matrix2_valid && requested_matrix2.can_run() && matrix2_addr == address2;
+    if (one_ready && two_ready) return std::pair{requested_vector1.data, requested_matrix1.data};
+
+    vector1_addr = address1;
+    matrix1_addr = address2;
+    requested_vector1_valid = true;
+    requested_matrix1_valid = true;
+
+    uint32_t cycle_offset = 0 ;
+    if (!one_ready) {
+        get_vector_from_memory(cycle_offset, true);
+        cycle_offset = defs::get_global_cycle() - requested_vector1.cycle;
+    }
+    if (!two_ready) {
+        get_matrix_from_memory(cycle_offset, false);
+    }
+    
+    return std::nullopt;   
+}
+
 std::optional<std::pair<Vec,Vec>> DataRequestor::get_vector_pair(uint32_t address1, uint32_t address2) {
     //Got the data already
     bool one_ready = requested_vector1_valid && requested_vector1.can_run() && vector1_addr == address1;
@@ -218,10 +241,10 @@ void Matrix::modify_cycle() {
     uint8_t value;
 
     if (working_command.col % 2) { //1 and 3 are in lower bytes
-        mask = 0x00FF;
+        mask = 0x3;
         value = working_command.value;
     } else { //2 and 4 are in upper bytes
-        mask = 0xFF00;
+        mask = 0xC;
         value = working_command.value << 16;
     }
 
