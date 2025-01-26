@@ -50,7 +50,7 @@ def test_blit_pix(run_program,actual_memory):
     FRAMEBUFFER_WIDTH = 300
     FRAMEBUFFER_HEIGHT = 200
     FRAMEBUFFER_PIXEL_BYTES = 4
-    FRAMEBUFFER_ADDR = 0x1FFC0000
+    FRAMEBUFFER_ADDR = 0xFFC0000
 
     for y in range(FRAMEBUFFER_HEIGHT):
         for x in range(FRAMEBUFFER_WIDTH):
@@ -80,7 +80,7 @@ def test_blit_clear(run_program,actual_memory):
     FRAMEBUFFER_WIDTH = 300
     FRAMEBUFFER_HEIGHT = 200
     FRAMEBUFFER_PIXEL_BYTES = 4
-    FRAMEBUFFER_ADDR = 0x1FFC0000
+    FRAMEBUFFER_ADDR = 0xFFC0000
 
     for y in range(FRAMEBUFFER_HEIGHT):
         for x in range(FRAMEBUFFER_WIDTH):
