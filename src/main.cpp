@@ -107,6 +107,7 @@ class System {
         dma.base_run_cycle();
         blitter.base_run_cycle();
         renderer.base_run_cycle();
+        matrix.base_run_cycle();
     }
 
     bool wait_for_signal(uint32_t pc) {

@@ -234,6 +234,7 @@ void Scheduler::run_cycle() {
     check_pipeline<dma::Command>(dma, core_dma_frontend_state, dma_frontend_queue, std::bind(&Scheduler::dma_complete, this));
     check_pipeline<blit::Command>(blitter, core_blitter_frontend_state, blitter_frontend_queue, std::bind(&Scheduler::blitter_complete, this));
     check_pipeline<stream::Command>(renderer, core_renderer_frontend_state, renderer_frontend_queue, std::bind(&Scheduler::renderer_complete, this));
+    check_pipeline<matrix::Command>(matrix, core_matrix_frontend_state, matrix_frontend_queue, std::bind(&Scheduler::matrix_complete, this));
 }
 
 }

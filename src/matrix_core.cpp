@@ -31,7 +31,7 @@ void DataRequestor::get_matrix_from_memory(uint32_t cycle_offset, bool one) {
     uint32_t head = address & ~uint32_t(0x3C);
     uint32_t offset = address - head;
     auto data = memory->read(head);
-    uint32_t have = std::max(uint(32), vpu::defs::MEM_ACCESS_WIDTH - offset); 
+    uint32_t have = std::min(uint(32), vpu::defs::MEM_ACCESS_WIDTH - offset); 
     assert(have%2 == 0);
 
     Defer<Mat>& m = one ? requested_matrix1 : requested_matrix2;
@@ -109,7 +109,7 @@ std::optional<Mat> DataRequestor::get_matrix(uint32_t address) {
 void DataRequestor::write_matrix(uint32_t address, Mat data) {
     uint32_t head = address & ~uint32_t(0x3C);
     uint32_t offset = address - head;
-    uint32_t have = std::max(uint(32), vpu::defs::MEM_ACCESS_WIDTH - offset); 
+    uint32_t have = std::min(uint(32), vpu::defs::MEM_ACCESS_WIDTH - offset); 
 
     std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> ret;
     uint64_t mask = 0;
@@ -117,13 +117,13 @@ void DataRequestor::write_matrix(uint32_t address, Mat data) {
     int row = 0;
     int col = 0;
     
-    for (int i = offset; i < vpu::defs::MEM_ACCESS_WIDTH; i+=2) {
+    for (int i = offset; i < have; i+=2) {
         assert(row != 4);
 
         ret[i] = uint8_t(0xFF&data[row][col]);
         ret[i+1] = uint8_t(0xFF&(data[row][col]>>8));
-        mask |= (0x1 << i);
-        mask |= (0x1 << (i+1));
+        mask |= (uint64_t(0x1) << i);
+        mask |= (uint64_t(0x1) << (i+1));
 
         col += 1;
         if (col >= 4) {
@@ -231,7 +231,7 @@ void Matrix::modify_cycle() {
     assert(working_command.col >= 1 && working_command.col <= 4);
 
     //first two columns in same word, last two in next word
-    uint32_t offset = (working_command.col-1) / 2;
+    uint32_t offset = (working_command.col <= 2) ? 0 : 4;
     if (working_command.operation == Operation::SET_MAT) {
         offset += (working_command.row-1) * 4 * 2;
     }
