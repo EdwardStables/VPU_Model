@@ -3,6 +3,7 @@ release
 .vscode
 *.out
 *.dbg
+*.hex
 defs
 .pytest_cache
 __pycache__
