@@ -29,8 +29,10 @@ public:
     Memory();
     uint32_t read_word(uint32_t addr);
     void write_word(uint32_t addr, uint32_t data);
+    void write_word_mask(uint32_t addr, uint32_t data, uint8_t mask);
     std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> read(uint32_t addr);
     void write(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> data);
+    void write_mask(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> data, uint64_t mask);
 };
 
 }

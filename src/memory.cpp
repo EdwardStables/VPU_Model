@@ -39,9 +39,17 @@ uint32_t Memory::read_word(uint32_t addr) {
     return ret;
 }
 void Memory::write_word(uint32_t addr, uint32_t data) {
-    addr &= 0xFFFFFFFC;
+    assert((addr & 0x3) == 0); //Must be 4-byte aligned
     for (size_t i = 0; i<4; i++)
         this->data[addr+i] = 0xFF & (data >> 8*i);
+}
+
+void Memory::write_word_mask(uint32_t addr, uint32_t data, uint8_t mask) {
+    assert((addr & 0x3) == 0); //Must be 4-byte aligned
+    for (size_t i = 0; i<4; i++) {
+        if (0x1 & (mask >> i))
+            this->data[addr+i] = 0xFF & (data >> 8*i);
+    }
 }
 
 std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> Memory::read(uint32_t addr) {
@@ -56,6 +64,17 @@ void Memory::write(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH
     assert((addr & 0x3F) == 0); //Must be 64-byte aligned
     assert(addr <= vpu::defs::MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't write beyond the end
     std::copy(write_data.begin(), write_data.end(), data.begin() + addr);
+}
+
+void Memory::write_mask(uint32_t addr, std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> write_data, uint64_t mask) {
+    assert((addr & 0x3F) == 0); //Must be 64-byte aligned
+    assert(addr <= vpu::defs::MEM_SIZE-vpu::defs::MEM_ACCESS_WIDTH); //Don't write beyond the end
+    
+    //Iterate over 32 bit words
+    for (int i = 0; i < vpu::defs::MEM_ACCESS_WIDTH; i++) {
+        if ((mask>>i) & 0x1)
+            data[addr+i] = write_data[i];
+    }
 }
 
 }
