@@ -25,6 +25,7 @@ add_executable(vpu
     src/scheduler.cpp
     src/blitter.cpp
     src/stream_renderer.cpp
+    src/matrix_core.cpp
     src/rpc_interface.cpp
     src/debug.cpp
     src/stb.cpp
