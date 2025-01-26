@@ -91,3 +91,15 @@ def test_blit_clear(run_program,actual_memory):
             assert actual_memory[addr+1] == 0xFF
             assert actual_memory[addr+2] == 0xFF
             assert actual_memory[addr+3] == 0xFF
+
+@pytest.mark.parametrize("run_program, actual_memory", params("matrix_ops"), indirect=True)
+def test_matrix_access(run_program,actual_memory):
+    SP = 0x100000
+    target = 1
+    for i in range(0,32,2):
+        v  = actual_memory[SP+i]
+        v |= actual_memory[SP+i+1] <<  8
+        assert (target << 4) == v
+        target += 1
+
+
