@@ -13,6 +13,13 @@ DataRequestor::DataRequestor(std::unique_ptr<vpu::mem::Memory>& memory)
       requested_vector1({}), requested_vector2({})
 { }
 
+void DataRequestor::invalidate() {
+    requested_matrix1_valid = false;
+    requested_matrix2_valid = false;
+    requested_vector1_valid = false;
+    requested_vector2_valid = false;
+}
+
 void DataRequestor::get_vector_from_memory(uint32_t cycle_offset, bool one) {
     uint32_t addr = one ? vector1_addr : vector2_addr;
     Defer<Vec>& v = one ? requested_vector1 : requested_vector2;
@@ -23,7 +30,7 @@ void DataRequestor::get_vector_from_memory(uint32_t cycle_offset, bool one) {
     ret = memory->read_word(addr+4);
     v.data[2] = ret & 0xFFFF;
     v.data[3] = (ret >> 16) & 0xFFFF;
-    v.update(defs::get_global_cycle() + 1);
+    v.update(defs::get_next_global_cycle() + cycle_offset);
 }
 
 void DataRequestor::get_matrix_from_memory(uint32_t cycle_offset, bool one) {
@@ -35,11 +42,11 @@ void DataRequestor::get_matrix_from_memory(uint32_t cycle_offset, bool one) {
     assert(have%2 == 0);
 
     Defer<Mat>& m = one ? requested_matrix1 : requested_matrix2;
-    m.update(defs::get_global_cycle() + 1);
+    m.update(defs::get_next_global_cycle() + cycle_offset);
     int row = 0;
     int col = 0;
     
-    for (int i = offset; i < vpu::defs::MEM_ACCESS_WIDTH; i+=2) {
+    for (int i = offset; i < have+offset; i+=2) {
         assert(row != 4);
 
         m.data[row][col] = data[i];
@@ -54,7 +61,7 @@ void DataRequestor::get_matrix_from_memory(uint32_t cycle_offset, bool one) {
 
     if (have == 32) return;
 
-    m.update(defs::get_global_cycle() + 2);
+    m.update(defs::get_next_global_cycle() + 1 + cycle_offset);
     head += vpu::defs::MEM_ACCESS_WIDTH;
     int i = 0;
     while (row < 4) {
@@ -84,7 +91,8 @@ std::optional<std::pair<Mat,Mat>> DataRequestor::get_matrix_pair(uint32_t addres
     uint32_t cycle_offset = 0 ;
     if (!one_ready) {
         get_matrix_from_memory(cycle_offset, true);
-        cycle_offset = defs::get_global_cycle() - requested_matrix1.cycle;
+        auto gc = defs::get_global_cycle();
+        cycle_offset = gc < requested_matrix1.cycle ? requested_matrix1.cycle - gc : 0;
     }
     if (!two_ready) {
         get_matrix_from_memory(cycle_offset, false);
@@ -117,7 +125,7 @@ void DataRequestor::write_matrix(uint32_t address, Mat data) {
     int row = 0;
     int col = 0;
     
-    for (int i = offset; i < have; i+=2) {
+    for (int i = offset; i < have+offset; i+=2) {
         assert(row != 4);
 
         ret[i] = uint8_t(0xFF&data[row][col]);
@@ -161,7 +169,7 @@ void DataRequestor::write_matrix(uint32_t address, Mat data) {
 std::optional<std::pair<Vec,Mat>> DataRequestor::get_vector_matrix_pair(uint32_t address1, uint32_t address2) {
     //Got the data already
     bool one_ready = requested_vector1_valid && requested_vector1.can_run() && vector1_addr == address1;
-    bool two_ready = requested_matrix2_valid && requested_matrix2.can_run() && matrix2_addr == address2;
+    bool two_ready = requested_matrix1_valid && requested_matrix1.can_run() && matrix1_addr == address2;
     if (one_ready && two_ready) return std::pair{requested_vector1.data, requested_matrix1.data};
 
     vector1_addr = address1;
@@ -172,10 +180,11 @@ std::optional<std::pair<Vec,Mat>> DataRequestor::get_vector_matrix_pair(uint32_t
     uint32_t cycle_offset = 0 ;
     if (!one_ready) {
         get_vector_from_memory(cycle_offset, true);
-        cycle_offset = defs::get_global_cycle() - requested_vector1.cycle;
+        auto gc = defs::get_global_cycle();
+        cycle_offset = gc < requested_vector1.cycle ? requested_vector1.cycle - gc : 0;
     }
     if (!two_ready) {
-        get_matrix_from_memory(cycle_offset, false);
+        get_matrix_from_memory(cycle_offset, true);
     }
     
     return std::nullopt;   
@@ -195,7 +204,8 @@ std::optional<std::pair<Vec,Vec>> DataRequestor::get_vector_pair(uint32_t addres
     uint32_t cycle_offset = 0 ;
     if (!one_ready) {
         get_vector_from_memory(cycle_offset, true);
-        cycle_offset = defs::get_global_cycle() - requested_vector1.cycle;
+        auto gc = defs::get_global_cycle();
+        cycle_offset = gc < requested_vector1.cycle ? requested_vector1.cycle - gc : 0;
     }
     if (!two_ready) {
         get_vector_from_memory(cycle_offset, false);
@@ -272,6 +282,20 @@ bool Matrix::matrix_request_cycle() {
         }
         return false;
     }
+    if ( //one matrix and one vector
+        working_command.operation == Operation::TRANSLATE ||
+        working_command.operation == Operation::SCALE ||
+        working_command.operation == Operation::ROTATE
+    ) {
+        //Remaining require one matrix
+        auto got_data = requestor.get_vector_matrix_pair(s1, s2);
+        if (got_data) {
+            input_vec1 = got_data.value().first;
+            input_mat1 = got_data.value().second;
+            return true;
+        }
+        return false;
+    }
 
     //Remaining require one matrix
     auto got_data = requestor.get_matrix(s1);
@@ -286,22 +310,23 @@ void Matrix::matrix_mult_cycle() {
     Mat output = {};
     Mat& i1 = input_mat1;
     Mat& i2 = input_mat2;
-    output[0][0] = i1[0][0]*i2[0][0] + i1[0][1]*i2[1][0] + i1[0][2]*i2[2][0] + i1[0][3]*i2[3][0];
-    output[0][1] = i1[0][0]*i2[0][1] + i1[0][1]*i2[1][1] + i1[0][2]*i2[2][1] + i1[0][3]*i2[3][1];
-    output[0][2] = i1[0][0]*i2[0][2] + i1[0][1]*i2[1][2] + i1[0][2]*i2[2][2] + i1[0][3]*i2[3][2];
-    output[0][3] = i1[0][0]*i2[0][3] + i1[0][1]*i2[1][3] + i1[0][2]*i2[2][3] + i1[0][3]*i2[3][3];
-    output[1][0] = i1[1][0]*i2[0][0] + i1[1][1]*i2[1][0] + i1[1][2]*i2[2][0] + i1[1][3]*i2[3][0];
-    output[1][1] = i1[1][0]*i2[0][1] + i1[1][1]*i2[1][1] + i1[1][2]*i2[2][1] + i1[1][3]*i2[3][1];
-    output[1][2] = i1[1][0]*i2[0][2] + i1[1][1]*i2[1][2] + i1[1][2]*i2[2][2] + i1[1][3]*i2[3][2];
-    output[1][3] = i1[1][0]*i2[0][3] + i1[1][1]*i2[1][3] + i1[1][2]*i2[2][3] + i1[1][3]*i2[3][3];
-    output[2][0] = i1[2][0]*i2[0][0] + i1[2][1]*i2[1][0] + i1[2][2]*i2[2][0] + i1[2][3]*i2[3][0];
-    output[2][1] = i1[2][0]*i2[0][1] + i1[2][1]*i2[1][1] + i1[2][2]*i2[2][1] + i1[2][3]*i2[3][1];
-    output[2][2] = i1[2][0]*i2[0][2] + i1[2][1]*i2[1][2] + i1[2][2]*i2[2][2] + i1[2][3]*i2[3][2];
-    output[2][3] = i1[2][0]*i2[0][3] + i1[2][1]*i2[1][3] + i1[2][2]*i2[2][3] + i1[2][3]*i2[3][3];
-    output[3][0] = i1[3][0]*i2[0][0] + i1[3][1]*i2[1][0] + i1[3][2]*i2[2][0] + i1[3][3]*i2[3][0];
-    output[3][1] = i1[3][0]*i2[0][1] + i1[3][1]*i2[1][1] + i1[3][2]*i2[2][1] + i1[3][3]*i2[3][1];
-    output[3][2] = i1[3][0]*i2[0][2] + i1[3][1]*i2[1][2] + i1[3][2]*i2[2][2] + i1[3][3]*i2[3][2];
-    output[3][3] = i1[3][0]*i2[0][3] + i1[3][1]*i2[1][3] + i1[3][2]*i2[2][3] + i1[3][3]*i2[3][3];
+    //Offset to account for multiplication scaling factor in fixed point
+    output[0][0] = (i1[0][0]*i2[0][0] + i1[0][1]*i2[1][0] + i1[0][2]*i2[2][0] + i1[0][3]*i2[3][0]) >> 4;
+    output[0][1] = (i1[0][0]*i2[0][1] + i1[0][1]*i2[1][1] + i1[0][2]*i2[2][1] + i1[0][3]*i2[3][1]) >> 4;
+    output[0][2] = (i1[0][0]*i2[0][2] + i1[0][1]*i2[1][2] + i1[0][2]*i2[2][2] + i1[0][3]*i2[3][2]) >> 4;
+    output[0][3] = (i1[0][0]*i2[0][3] + i1[0][1]*i2[1][3] + i1[0][2]*i2[2][3] + i1[0][3]*i2[3][3]) >> 4;
+    output[1][0] = (i1[1][0]*i2[0][0] + i1[1][1]*i2[1][0] + i1[1][2]*i2[2][0] + i1[1][3]*i2[3][0]) >> 4;
+    output[1][1] = (i1[1][0]*i2[0][1] + i1[1][1]*i2[1][1] + i1[1][2]*i2[2][1] + i1[1][3]*i2[3][1]) >> 4;
+    output[1][2] = (i1[1][0]*i2[0][2] + i1[1][1]*i2[1][2] + i1[1][2]*i2[2][2] + i1[1][3]*i2[3][2]) >> 4;
+    output[1][3] = (i1[1][0]*i2[0][3] + i1[1][1]*i2[1][3] + i1[1][2]*i2[2][3] + i1[1][3]*i2[3][3]) >> 4;
+    output[2][0] = (i1[2][0]*i2[0][0] + i1[2][1]*i2[1][0] + i1[2][2]*i2[2][0] + i1[2][3]*i2[3][0]) >> 4;
+    output[2][1] = (i1[2][0]*i2[0][1] + i1[2][1]*i2[1][1] + i1[2][2]*i2[2][1] + i1[2][3]*i2[3][1]) >> 4;
+    output[2][2] = (i1[2][0]*i2[0][2] + i1[2][1]*i2[1][2] + i1[2][2]*i2[2][2] + i1[2][3]*i2[3][2]) >> 4;
+    output[2][3] = (i1[2][0]*i2[0][3] + i1[2][1]*i2[1][3] + i1[2][2]*i2[2][3] + i1[2][3]*i2[3][3]) >> 4;
+    output[3][0] = (i1[3][0]*i2[0][0] + i1[3][1]*i2[1][0] + i1[3][2]*i2[2][0] + i1[3][3]*i2[3][0]) >> 4;
+    output[3][1] = (i1[3][0]*i2[0][1] + i1[3][1]*i2[1][1] + i1[3][2]*i2[2][1] + i1[3][3]*i2[3][1]) >> 4;
+    output[3][2] = (i1[3][0]*i2[0][2] + i1[3][1]*i2[1][2] + i1[3][2]*i2[2][2] + i1[3][3]*i2[3][2]) >> 4;
+    output[3][3] = (i1[3][0]*i2[0][3] + i1[3][1]*i2[1][3] + i1[3][2]*i2[2][3] + i1[3][3]*i2[3][3]) >> 4;
 
     i1 = output;
 }
@@ -325,22 +350,22 @@ void Matrix::matrix_elementwise_cycle(bool add) {
         input_mat1[3][2] += input_mat2[3][2];
         input_mat1[3][3] += input_mat2[3][3];
     } else {
-        input_mat1[0][0] *= input_mat2[0][0];
-        input_mat1[0][1] *= input_mat2[0][1];
-        input_mat1[0][2] *= input_mat2[0][2];
-        input_mat1[0][3] *= input_mat2[0][3];
-        input_mat1[1][0] *= input_mat2[1][0];
-        input_mat1[1][1] *= input_mat2[1][1];
-        input_mat1[1][2] *= input_mat2[1][2];
-        input_mat1[1][3] *= input_mat2[1][3];
-        input_mat1[2][0] *= input_mat2[2][0];
-        input_mat1[2][1] *= input_mat2[2][1];
-        input_mat1[2][2] *= input_mat2[2][2];
-        input_mat1[2][3] *= input_mat2[2][3];
-        input_mat1[3][0] *= input_mat2[3][0];
-        input_mat1[3][1] *= input_mat2[3][1];
-        input_mat1[3][2] *= input_mat2[3][2];
-        input_mat1[3][3] *= input_mat2[3][3];
+        input_mat1[0][0] = (input_mat1[0][0] * input_mat2[0][0]) >> 4;
+        input_mat1[0][1] = (input_mat1[0][1] * input_mat2[0][1]) >> 4;
+        input_mat1[0][2] = (input_mat1[0][2] * input_mat2[0][2]) >> 4;
+        input_mat1[0][3] = (input_mat1[0][3] * input_mat2[0][3]) >> 4;
+        input_mat1[1][0] = (input_mat1[1][0] * input_mat2[1][0]) >> 4;
+        input_mat1[1][1] = (input_mat1[1][1] * input_mat2[1][1]) >> 4;
+        input_mat1[1][2] = (input_mat1[1][2] * input_mat2[1][2]) >> 4;
+        input_mat1[1][3] = (input_mat1[1][3] * input_mat2[1][3]) >> 4;
+        input_mat1[2][0] = (input_mat1[2][0] * input_mat2[2][0]) >> 4;
+        input_mat1[2][1] = (input_mat1[2][1] * input_mat2[2][1]) >> 4;
+        input_mat1[2][2] = (input_mat1[2][2] * input_mat2[2][2]) >> 4;
+        input_mat1[2][3] = (input_mat1[2][3] * input_mat2[2][3]) >> 4;
+        input_mat1[3][0] = (input_mat1[3][0] * input_mat2[3][0]) >> 4;
+        input_mat1[3][1] = (input_mat1[3][1] * input_mat2[3][1]) >> 4;
+        input_mat1[3][2] = (input_mat1[3][2] * input_mat2[3][2]) >> 4;
+        input_mat1[3][3] = (input_mat1[3][3] * input_mat2[3][3]) >> 4;
     }
 }
 
@@ -351,8 +376,13 @@ void Matrix::matrix_cycle() {
     Operation operation = working_command.operation;
     uint16_t v = working_command.value;
     switch(operation) {
-        case Operation::ROTATE:
         case Operation::TRANSLATE:
+            input_mat2[0] = {0x10,    0,    0, input_vec1[0]};
+            input_mat2[1] = {   0, 0x10,    0, input_vec1[1]};
+            input_mat2[2] = {   0,    0, 0x10, input_vec1[2]};
+            input_mat2[3] = {   0,    0,    0, 0x10};
+            break;
+        case Operation::ROTATE:
         case Operation::SCALE:
             //Set up the rotation/translation/scale matrix in input 2
             std::cerr << "Not implemented yet dummy";
@@ -490,8 +520,9 @@ void Matrix::vector_cycle() {
 void Matrix::run_cycle(){
     switch(working_command.operation) {
         //Modify in-place
-        case Operation::SET_MAT:
         case Operation::SET_VEC:
+            working_command.row = 1;
+        case Operation::SET_MAT:
             modify_cycle();
             break;
         //Write new vector
@@ -515,6 +546,12 @@ void Matrix::run_cycle(){
         default:
             std::cerr << "Invalid Matrix operation ";
             assert(false);
+    }
+
+    //In future this can be more of a cache and can be more optimal
+    //For now just clear valid bits at the end of the operation
+    if (state == State::FINISHED) {
+        requestor.invalidate();
     }
 }
 

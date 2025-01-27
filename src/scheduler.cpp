@@ -55,7 +55,7 @@ bool Scheduler::submit_dma(uint32_t valid_cycle, defs::Opcode opcode, uint32_t v
 bool Scheduler::submit_sched(uint32_t valid_cycle, defs::Opcode opcode, uint32_t val1, uint32_t val2) {
     switch(opcode) {
         case vpu::defs::P_SCH_FNC:
-            return (dma_outstanding==0) && (blitter_outstanding==0) && (renderer_outstanding==0);
+            return (dma_outstanding==0) && (blitter_outstanding==0) && (renderer_outstanding==0) && (matrix_outstanding==0);
         default:
             std::cerr << "Scheduler error for opcode " << vpu::defs::opcode_to_string(opcode);
             std::cerr << " in sched pipe. ";

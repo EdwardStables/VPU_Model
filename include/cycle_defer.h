@@ -19,6 +19,7 @@ struct Defer {
 
     void update(uint32_t new_time) {
         assert(new_time > defs::get_global_cycle());
+        cycle = new_time;
     }
 
     void increment() {

@@ -90,6 +90,8 @@ public:
     std::optional<Vec> get_vector(uint32_t address);
     std::optional<std::pair<Vec,Mat>> get_vector_matrix_pair(uint32_t address1, uint32_t address2);
     void write_vector(uint32_t address, Vec data);
+
+    void invalidate();
 };
 
 class Matrix : public Subsystem<Command> {
