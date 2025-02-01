@@ -332,7 +332,7 @@ void StreamRenderer::render_cycle_submit_voxel() {
 
     //Scale to account for fixed point
     uint16_t x_in = 0xFFFF & (next_to_render.x << 4);
-    uint16_t y_in = 0xFFFF & ((next_to_render.y + 100) << 4);
+    uint16_t y_in = 0xFFFF & (next_to_render.y << 4);
     uint16_t z_in = 0xFFFF & (next_to_render.z << 4);
     uint16_t w_in = 0xFFFF & (1 << 4); //implicit coordinate
     auto& m = transformation.mat;

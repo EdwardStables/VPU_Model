@@ -94,7 +94,9 @@ public:
     void invalidate();
 };
 
+uint16_t sin_12_4_fp(uint16_t);
 std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t);
+uint16_t ar_shift_right(uint16_t, uint16_t);
 
 class Matrix : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;

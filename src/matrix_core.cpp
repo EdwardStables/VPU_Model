@@ -306,27 +306,39 @@ bool Matrix::matrix_request_cycle() {
     return false;
 }
 
+uint16_t ar_shift_right(uint16_t val, uint16_t shift) {
+    if ((0x8000 & val) == 0) return val >> shift;
+
+    //TODO not very fast for what it is
+    for (int i = 0; i < shift; i++) {
+        val >>= 1;
+        val |= 0x8000;
+    }
+
+    return val;
+}
+
 void Matrix::matrix_mult_cycle() {
     Mat output = {};
     Mat& i1 = input_mat1;
     Mat& i2 = input_mat2;
     //Offset to account for multiplication scaling factor in fixed point
-    output[0][0] = (i1[0][0]*i2[0][0] + i1[0][1]*i2[1][0] + i1[0][2]*i2[2][0] + i1[0][3]*i2[3][0]) >> 4;
-    output[0][1] = (i1[0][0]*i2[0][1] + i1[0][1]*i2[1][1] + i1[0][2]*i2[2][1] + i1[0][3]*i2[3][1]) >> 4;
-    output[0][2] = (i1[0][0]*i2[0][2] + i1[0][1]*i2[1][2] + i1[0][2]*i2[2][2] + i1[0][3]*i2[3][2]) >> 4;
-    output[0][3] = (i1[0][0]*i2[0][3] + i1[0][1]*i2[1][3] + i1[0][2]*i2[2][3] + i1[0][3]*i2[3][3]) >> 4;
-    output[1][0] = (i1[1][0]*i2[0][0] + i1[1][1]*i2[1][0] + i1[1][2]*i2[2][0] + i1[1][3]*i2[3][0]) >> 4;
-    output[1][1] = (i1[1][0]*i2[0][1] + i1[1][1]*i2[1][1] + i1[1][2]*i2[2][1] + i1[1][3]*i2[3][1]) >> 4;
-    output[1][2] = (i1[1][0]*i2[0][2] + i1[1][1]*i2[1][2] + i1[1][2]*i2[2][2] + i1[1][3]*i2[3][2]) >> 4;
-    output[1][3] = (i1[1][0]*i2[0][3] + i1[1][1]*i2[1][3] + i1[1][2]*i2[2][3] + i1[1][3]*i2[3][3]) >> 4;
-    output[2][0] = (i1[2][0]*i2[0][0] + i1[2][1]*i2[1][0] + i1[2][2]*i2[2][0] + i1[2][3]*i2[3][0]) >> 4;
-    output[2][1] = (i1[2][0]*i2[0][1] + i1[2][1]*i2[1][1] + i1[2][2]*i2[2][1] + i1[2][3]*i2[3][1]) >> 4;
-    output[2][2] = (i1[2][0]*i2[0][2] + i1[2][1]*i2[1][2] + i1[2][2]*i2[2][2] + i1[2][3]*i2[3][2]) >> 4;
-    output[2][3] = (i1[2][0]*i2[0][3] + i1[2][1]*i2[1][3] + i1[2][2]*i2[2][3] + i1[2][3]*i2[3][3]) >> 4;
-    output[3][0] = (i1[3][0]*i2[0][0] + i1[3][1]*i2[1][0] + i1[3][2]*i2[2][0] + i1[3][3]*i2[3][0]) >> 4;
-    output[3][1] = (i1[3][0]*i2[0][1] + i1[3][1]*i2[1][1] + i1[3][2]*i2[2][1] + i1[3][3]*i2[3][1]) >> 4;
-    output[3][2] = (i1[3][0]*i2[0][2] + i1[3][1]*i2[1][2] + i1[3][2]*i2[2][2] + i1[3][3]*i2[3][2]) >> 4;
-    output[3][3] = (i1[3][0]*i2[0][3] + i1[3][1]*i2[1][3] + i1[3][2]*i2[2][3] + i1[3][3]*i2[3][3]) >> 4;
+    output[0][0] = ar_shift_right(uint16_t(i1[0][0]*i2[0][0]) + uint16_t(i1[0][1]*i2[1][0]) + uint16_t(i1[0][2]*i2[2][0]) + uint16_t(i1[0][3]*i2[3][0]), 4);
+    output[0][1] = ar_shift_right(uint16_t(i1[0][0]*i2[0][1]) + uint16_t(i1[0][1]*i2[1][1]) + uint16_t(i1[0][2]*i2[2][1]) + uint16_t(i1[0][3]*i2[3][1]), 4);
+    output[0][2] = ar_shift_right(uint16_t(i1[0][0]*i2[0][2]) + uint16_t(i1[0][1]*i2[1][2]) + uint16_t(i1[0][2]*i2[2][2]) + uint16_t(i1[0][3]*i2[3][2]), 4);
+    output[0][3] = ar_shift_right(uint16_t(i1[0][0]*i2[0][3]) + uint16_t(i1[0][1]*i2[1][3]) + uint16_t(i1[0][2]*i2[2][3]) + uint16_t(i1[0][3]*i2[3][3]), 4);
+    output[1][0] = ar_shift_right(uint16_t(i1[1][0]*i2[0][0]) + uint16_t(i1[1][1]*i2[1][0]) + uint16_t(i1[1][2]*i2[2][0]) + uint16_t(i1[1][3]*i2[3][0]), 4);
+    output[1][1] = ar_shift_right(uint16_t(i1[1][0]*i2[0][1]) + uint16_t(i1[1][1]*i2[1][1]) + uint16_t(i1[1][2]*i2[2][1]) + uint16_t(i1[1][3]*i2[3][1]), 4);
+    output[1][2] = ar_shift_right(uint16_t(i1[1][0]*i2[0][2]) + uint16_t(i1[1][1]*i2[1][2]) + uint16_t(i1[1][2]*i2[2][2]) + uint16_t(i1[1][3]*i2[3][2]), 4);
+    output[1][3] = ar_shift_right(uint16_t(i1[1][0]*i2[0][3]) + uint16_t(i1[1][1]*i2[1][3]) + uint16_t(i1[1][2]*i2[2][3]) + uint16_t(i1[1][3]*i2[3][3]), 4);
+    output[2][0] = ar_shift_right(uint16_t(i1[2][0]*i2[0][0]) + uint16_t(i1[2][1]*i2[1][0]) + uint16_t(i1[2][2]*i2[2][0]) + uint16_t(i1[2][3]*i2[3][0]), 4);
+    output[2][1] = ar_shift_right(uint16_t(i1[2][0]*i2[0][1]) + uint16_t(i1[2][1]*i2[1][1]) + uint16_t(i1[2][2]*i2[2][1]) + uint16_t(i1[2][3]*i2[3][1]), 4);
+    output[2][2] = ar_shift_right(uint16_t(i1[2][0]*i2[0][2]) + uint16_t(i1[2][1]*i2[1][2]) + uint16_t(i1[2][2]*i2[2][2]) + uint16_t(i1[2][3]*i2[3][2]), 4);
+    output[2][3] = ar_shift_right(uint16_t(i1[2][0]*i2[0][3]) + uint16_t(i1[2][1]*i2[1][3]) + uint16_t(i1[2][2]*i2[2][3]) + uint16_t(i1[2][3]*i2[3][3]), 4);
+    output[3][0] = ar_shift_right(uint16_t(i1[3][0]*i2[0][0]) + uint16_t(i1[3][1]*i2[1][0]) + uint16_t(i1[3][2]*i2[2][0]) + uint16_t(i1[3][3]*i2[3][0]), 4);
+    output[3][1] = ar_shift_right(uint16_t(i1[3][0]*i2[0][1]) + uint16_t(i1[3][1]*i2[1][1]) + uint16_t(i1[3][2]*i2[2][1]) + uint16_t(i1[3][3]*i2[3][1]), 4);
+    output[3][2] = ar_shift_right(uint16_t(i1[3][0]*i2[0][2]) + uint16_t(i1[3][1]*i2[1][2]) + uint16_t(i1[3][2]*i2[2][2]) + uint16_t(i1[3][3]*i2[3][2]), 4);
+    output[3][3] = ar_shift_right(uint16_t(i1[3][0]*i2[0][3]) + uint16_t(i1[3][1]*i2[1][3]) + uint16_t(i1[3][2]*i2[2][3]) + uint16_t(i1[3][3]*i2[3][3]), 4);
 
     i1 = output;
 }
@@ -368,23 +380,20 @@ void Matrix::matrix_elementwise_cycle(bool add) {
         input_mat1[3][3] = (input_mat1[3][3] * input_mat2[3][3]) >> 4;
     }
 }
+uint16_t sin_12_4_fp(uint16_t angle) {
 
-std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t angle) {
-    uint16_t sin_factor = angle < 0 ? -1 : 1;
-
+    //Inversion required when we have an odd number of integer components in angle
+    bool invert = angle & 0x0010;
+    
+    //Only care about the fractional component for this calculation
     uint16_t sin_index = angle & 0xF;
-    uint16_t cos_index = 0x8 - sin_index;
 
+    //Mirrored around pi/2, so detect and reflect
     if (sin_index > 0b1000) {
         sin_index = 0x10 - sin_index;
     }
 
-    if (cos_index < 0) {
-        cos_index *= -1;
-    }
-
     uint16_t sin_magnitude;
-    uint16_t cos_magnitude;
 
     switch(sin_index) {
         case 0b0000: sin_magnitude = 0b0000; break;
@@ -400,21 +409,18 @@ std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t angle) {
             assert(false);
     }
 
-    switch(cos_index) {
-        case 0b0000: cos_magnitude = 0b0000; break;
-        case 0b0001: cos_magnitude = 0b0011; break;
-        case 0b0010: cos_magnitude = 0b0110; break;
-        case 0b0011: cos_magnitude = 0b1000; break;
-        case 0b0100: cos_magnitude = 0b1011; break;
-        case 0b0101: cos_magnitude = 0b1101; break;
-        case 0b0110: cos_magnitude = 0b1110; break;
-        case 0b0111: cos_magnitude = 0b1111; break;
-        case 0b1000: cos_magnitude = 0b10000; break;
-        default:
-            assert(false);
+    if (invert) {
+        sin_magnitude = (~sin_magnitude) + 1;
     }
 
-    return {sin_magnitude*sin_factor, cos_magnitude};
+    return sin_magnitude;
+}
+
+std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t angle) {
+    uint16_t sin_magnitude = sin_12_4_fp(angle);
+    uint16_t cos_magnitude = sin_12_4_fp(angle + 0b1000);
+
+    return {sin_magnitude, cos_magnitude};
 }
 
 void Matrix::set_mat2_to_rotate() {
