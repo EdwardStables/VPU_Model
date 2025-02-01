@@ -325,18 +325,23 @@ void StreamRenderer::render_cycle_submit_voxel() {
         return;
     }
     
+    //Make sure we're inside representable range of fixed point format
+    assert((next_to_render.x & 0xFFFFF000) == 0);
+    assert((next_to_render.y & 0xFFFFF000) == 0);
+    assert((next_to_render.z & 0xFFFFF000) == 0);
+
     //Scale to account for fixed point
-    uint32_t x_in = next_to_render.x << 4;
-    uint32_t y_in = next_to_render.y << 4;
-    uint32_t z_in = next_to_render.z << 4;
-    uint32_t w_in = 1 << 4; //implicit term
+    uint16_t x_in = 0xFFFF & (next_to_render.x << 4);
+    uint16_t y_in = 0xFFFF & ((next_to_render.y + 100) << 4);
+    uint16_t z_in = 0xFFFF & (next_to_render.z << 4);
+    uint16_t w_in = 0xFFFF & (1 << 4); //implicit coordinate
     auto& m = transformation.mat;
 
     //Apply transformation straight up to x and y
-    uint32_t x = (m[0][0] * x_in) + (m[0][1] * y_in) + (m[0][2] * z_in) + (m[0][3] * w_in);
-    uint32_t y = (m[1][0] * x_in) + (m[1][1] * y_in) + (m[1][2] * z_in) + (m[1][3] * w_in);
-    uint32_t z = (m[2][0] * x_in) + (m[2][1] * y_in) + (m[2][2] * z_in) + (m[2][3] * w_in);
-    uint32_t w = (m[3][0] * x_in) + (m[3][1] * y_in) + (m[3][2] * z_in) + (m[3][3] * w_in);
+    uint16_t x = (m[0][0] * x_in) + (m[0][1] * y_in) + (m[0][2] * z_in) + (m[0][3] * w_in);
+    uint16_t y = (m[1][0] * x_in) + (m[1][1] * y_in) + (m[1][2] * z_in) + (m[1][3] * w_in);
+    uint16_t z = (m[2][0] * x_in) + (m[2][1] * y_in) + (m[2][2] * z_in) + (m[2][3] * w_in);
+    uint16_t w = (m[3][0] * x_in) + (m[3][1] * y_in) + (m[3][2] * z_in) + (m[3][3] * w_in);
 
     // Scale back to 12.4 fixed point
     x >>= 4;

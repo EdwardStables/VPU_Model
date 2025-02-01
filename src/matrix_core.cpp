@@ -369,6 +369,78 @@ void Matrix::matrix_elementwise_cycle(bool add) {
     }
 }
 
+std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t angle) {
+    uint16_t sin_factor = angle < 0 ? -1 : 1;
+
+    uint16_t sin_index = angle & 0xF;
+    uint16_t cos_index = 0x8 - sin_index;
+
+    if (sin_index > 0b1000) {
+        sin_index = 0x10 - sin_index;
+    }
+
+    if (cos_index < 0) {
+        cos_index *= -1;
+    }
+
+    uint16_t sin_magnitude;
+    uint16_t cos_magnitude;
+
+    switch(sin_index) {
+        case 0b0000: sin_magnitude = 0b0000; break;
+        case 0b0001: sin_magnitude = 0b0011; break;
+        case 0b0010: sin_magnitude = 0b0110; break;
+        case 0b0011: sin_magnitude = 0b1000; break;
+        case 0b0100: sin_magnitude = 0b1011; break;
+        case 0b0101: sin_magnitude = 0b1101; break;
+        case 0b0110: sin_magnitude = 0b1110; break;
+        case 0b0111: sin_magnitude = 0b1111; break;
+        case 0b1000: sin_magnitude = 0b10000; break;
+        default:
+            assert(false);
+    }
+
+    switch(cos_index) {
+        case 0b0000: cos_magnitude = 0b0000; break;
+        case 0b0001: cos_magnitude = 0b0011; break;
+        case 0b0010: cos_magnitude = 0b0110; break;
+        case 0b0011: cos_magnitude = 0b1000; break;
+        case 0b0100: cos_magnitude = 0b1011; break;
+        case 0b0101: cos_magnitude = 0b1101; break;
+        case 0b0110: cos_magnitude = 0b1110; break;
+        case 0b0111: cos_magnitude = 0b1111; break;
+        case 0b1000: cos_magnitude = 0b10000; break;
+        default:
+            assert(false);
+    }
+
+    return {sin_magnitude*sin_factor, cos_magnitude};
+}
+
+void Matrix::set_mat2_to_rotate() {
+    auto [sg, cg] = sin_cos_12_4_fp(input_vec1[0]); //x, roll, gamma
+    auto [sb, cb] = sin_cos_12_4_fp(input_vec1[1]); //y, pitch, beta
+    auto [sa, ca] = sin_cos_12_4_fp(input_vec1[2]); //z, yaw, alpa
+
+    uint16_t casb = ((ca*sb)>>4);
+    uint16_t sasb = ((sa*sb)>>4);
+
+    uint16_t r1c1 = (ca*cb) >> 4;
+    uint16_t r1c2 = ((casb*sg)>>4) - ((sa*cg)>>4);
+    uint16_t r1c3 = ((casb*cg)>>4) + ((sa*sg)>>4);
+    uint16_t r2c1 = (sa*cb)>>4;
+    uint16_t r2c2 = ((sasb*sg)>>4) + ((ca*cg)>>4);
+    uint16_t r2c3 = ((sasb*cg)>>4) - ((ca*sg)>>4);
+    uint16_t r3c1 = -sb;
+    uint16_t r3c2 = (cb*sg)>>4;
+    uint16_t r3c3 = (cb*cg)>>4;
+
+    input_mat2[0] = { r1c1, r1c2, r1c3,    0};
+    input_mat2[1] = { r2c1, r2c2, r2c3,    0};
+    input_mat2[2] = { r3c1, r3c2, r3c3,    0};
+    input_mat2[3] = {    0,    0,    0, 0x10};
+}
+
 void Matrix::matrix_cycle() {
     if (!matrix_request_cycle()) return;
 
@@ -383,6 +455,8 @@ void Matrix::matrix_cycle() {
             input_mat2[3] = {   0,    0,    0, 0x10};
             break;
         case Operation::ROTATE:
+            set_mat2_to_rotate();
+            break;
         case Operation::SCALE:
             //Set up the rotation/translation/scale matrix in input 2
             std::cerr << "Not implemented yet dummy";

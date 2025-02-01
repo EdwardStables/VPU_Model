@@ -43,7 +43,7 @@ enum class Operation {
     ADD_VEC_SCALAR,  //Add a scalar to a vector 
     VEC_MAT_MULT,    //Vector matrix multiply
     //3D specific operations
-    ROTATE,          //Multiply matrix by rotation matrix described by vector [X,Y,Z,1]
+    ROTATE,          //Multiply matrix by rotation matrix described by vector [X,Y,Z,1], values are factors of pi
     TRANSLATE,       //Multiply matrix by translation matrix described by vector [X,Y,Z,1]
     SCALE,           //Multiply matrix by scale matrix described by vector [X,Y,Z,1]
 };
@@ -94,6 +94,8 @@ public:
     void invalidate();
 };
 
+std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t);
+
 class Matrix : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;
     DataRequestor requestor;
@@ -112,6 +114,7 @@ class Matrix : public Subsystem<Command> {
     bool matrix_request_cycle();
     void matrix_mult_cycle();
     void matrix_elementwise_cycle(bool add);
+    void set_mat2_to_rotate();
 
 public:
     Matrix(std::unique_ptr<vpu::mem::Memory>& memory);
