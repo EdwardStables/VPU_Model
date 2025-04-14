@@ -432,13 +432,13 @@ void Matrix::set_mat2_to_rotate() {
     uint16_t sasb = ((sa*sb)>>4);
 
     uint16_t r1c1 = (ca*cb) >> 4;
-    uint16_t r1c2 = ((casb*sg)>>4) - ((sa*cg)>>4);
-    uint16_t r1c3 = ((casb*cg)>>4) + ((sa*sg)>>4);
-    uint16_t r2c1 = (sa*cb)>>4;
+    uint16_t r2c1 = ((casb*sg)>>4) - ((sa*cg)>>4);
+    uint16_t r3c1 = ((casb*cg)>>4) + ((sa*sg)>>4);
+    uint16_t r1c2 = (sa*cb)>>4;
     uint16_t r2c2 = ((sasb*sg)>>4) + ((ca*cg)>>4);
-    uint16_t r2c3 = ((sasb*cg)>>4) - ((ca*sg)>>4);
-    uint16_t r3c1 = -sb;
-    uint16_t r3c2 = (cb*sg)>>4;
+    uint16_t r3c2 = ((sasb*cg)>>4) - ((ca*sg)>>4);
+    uint16_t r1c3 = -sb;
+    uint16_t r2c3 = (cb*sg)>>4;
     uint16_t r3c3 = (cb*cg)>>4;
 
     input_mat2[0] = { r1c1, r1c2, r1c3,    0};
@@ -455,10 +455,10 @@ void Matrix::matrix_cycle() {
     uint16_t v = working_command.value;
     switch(operation) {
         case Operation::TRANSLATE:
-            input_mat2[0] = {0x10,    0,    0, input_vec1[0]};
-            input_mat2[1] = {   0, 0x10,    0, input_vec1[1]};
-            input_mat2[2] = {   0,    0, 0x10, input_vec1[2]};
-            input_mat2[3] = {   0,    0,    0, 0x10};
+            input_mat2[0] = {         0x10,             0,            0,     0};
+            input_mat2[1] = {            0,          0x10,            0,     0};
+            input_mat2[2] = {            0,             0,         0x10,     0};
+            input_mat2[3] = {input_vec1[0], input_vec1[1], input_vec1[2], 0x10};
             break;
         case Operation::ROTATE:
             set_mat2_to_rotate();

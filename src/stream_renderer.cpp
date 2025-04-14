@@ -338,10 +338,10 @@ void StreamRenderer::render_cycle_submit_voxel() {
     auto& m = transformation.mat;
 
     //Apply transformation straight up to x and y
-    uint16_t x = (m[0][0] * x_in) + (m[0][1] * y_in) + (m[0][2] * z_in) + (m[0][3] * w_in);
-    uint16_t y = (m[1][0] * x_in) + (m[1][1] * y_in) + (m[1][2] * z_in) + (m[1][3] * w_in);
-    uint16_t z = (m[2][0] * x_in) + (m[2][1] * y_in) + (m[2][2] * z_in) + (m[2][3] * w_in);
-    uint16_t w = (m[3][0] * x_in) + (m[3][1] * y_in) + (m[3][2] * z_in) + (m[3][3] * w_in);
+    uint16_t x = (m[0][0] * x_in) + (m[1][0] * y_in) + (m[2][0] * z_in) + (m[3][0] * w_in);
+    uint16_t y = (m[0][1] * x_in) + (m[1][1] * y_in) + (m[2][1] * z_in) + (m[3][1] * w_in);
+    uint16_t z = (m[0][2] * x_in) + (m[1][2] * y_in) + (m[2][2] * z_in) + (m[3][2] * w_in);
+    uint16_t w = (m[0][3] * x_in) + (m[1][3] * y_in) + (m[2][3] * z_in) + (m[3][3] * w_in);
 
     // Scale back to 12.4 fixed point
     x >>= 4;
