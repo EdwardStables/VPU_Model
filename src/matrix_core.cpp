@@ -464,9 +464,10 @@ void Matrix::matrix_cycle() {
             set_mat2_to_rotate();
             break;
         case Operation::SCALE:
-            //Set up the rotation/translation/scale matrix in input 2
-            std::cerr << "Not implemented yet dummy";
-            assert(false);
+            input_mat2[0] = {input_vec1[0],             0,             0,    0};
+            input_mat2[1] = {            0, input_vec1[1],             0,    0};
+            input_mat2[2] = {            0,             0, input_vec1[2],    0};
+            input_mat2[3] = {            0,             0,            0 , 0x10};
             break;
         case Operation::ADD_MAT_SCALAR:
             input_mat2[0] = {v, v, v, v}; //Utilise the matrix add logic
