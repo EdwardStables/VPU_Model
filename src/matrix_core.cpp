@@ -318,6 +318,7 @@ uint16_t shift_right(uint16_t val, uint16_t shift, bool arithmetic) {
     return val;
 }
 
+//TODO negative isn't being handled entirely properly, breaks the rotation program
 uint16_t mat_mul_entry(Mat& i1, Mat& i2, int i1r, int i2c) {
     bool neg = (i1[i1r][0] & 0x8000) | (i2[0][i2c] & 0x8000);
     uint16_t t1 = i1[i1r][0]*i2[0][i2c];
@@ -325,10 +326,10 @@ uint16_t mat_mul_entry(Mat& i1, Mat& i2, int i1r, int i2c) {
     neg |= (i1[i1r][1] & 0x8000) | (i2[1][i2c] & 0x8000);
     uint16_t t2 = i1[i1r][1]*i2[1][i2c];
 
-    neg = (i1[i1r][2] & 0x8000) | (i2[2][i2c] & 0x8000);
+    neg |= (i1[i1r][2] & 0x8000) | (i2[2][i2c] & 0x8000);
     uint16_t t3 = i1[i1r][2]*i2[2][i2c];
 
-    neg = (i1[i1r][3] & 0x8000) | (i2[3][i2c] & 0x8000);
+    neg |= (i1[i1r][3] & 0x8000) | (i2[3][i2c] & 0x8000);
     uint16_t t4 = i1[i1r][3]*i2[3][i2c];
 
     return shift_right(t1 + t2 + t3 + t4, 4, neg);
