@@ -874,8 +874,6 @@ void ManagerCore::write_framebuffer() {
     auto& all_mem = vpu::mem::MemorySnooper::get_data(memory.get());
     void* data = (&(all_mem[0])) + vpu::defs::FRAMEBUFFER_ADDR;
 
-    std::cout << output_file << std::endl;
-
     int r = stbi_write_png(output_file.c_str(), x, y, comp, data, stride);
     if (r == 0) {
         std::cerr << "Failed to write frame " << frames_written << std::endl;

@@ -306,8 +306,8 @@ bool Matrix::matrix_request_cycle() {
     return false;
 }
 
-uint16_t ar_shift_right(uint16_t val, uint16_t shift) {
-    if ((0x8000 & val) == 0) return val >> shift;
+uint16_t shift_right(uint16_t val, uint16_t shift, bool arithmetic) {
+    if (!arithmetic || (0x8000 & val) == 0) return val >> shift;
 
     //TODO not very fast for what it is
     for (int i = 0; i < shift; i++) {
@@ -318,27 +318,43 @@ uint16_t ar_shift_right(uint16_t val, uint16_t shift) {
     return val;
 }
 
+uint16_t mat_mul_entry(Mat& i1, Mat& i2, int i1r, int i2c) {
+    bool neg = (i1[i1r][0] & 0x8000) | (i2[0][i2c] & 0x8000);
+    uint16_t t1 = i1[i1r][0]*i2[0][i2c];
+
+    neg |= (i1[i1r][1] & 0x8000) | (i2[1][i2c] & 0x8000);
+    uint16_t t2 = i1[i1r][1]*i2[1][i2c];
+
+    neg = (i1[i1r][2] & 0x8000) | (i2[2][i2c] & 0x8000);
+    uint16_t t3 = i1[i1r][2]*i2[2][i2c];
+
+    neg = (i1[i1r][3] & 0x8000) | (i2[3][i2c] & 0x8000);
+    uint16_t t4 = i1[i1r][3]*i2[3][i2c];
+
+    return shift_right(t1 + t2 + t3 + t4, 4, neg);
+}
+
 void Matrix::matrix_mult_cycle() {
     Mat output = {};
     Mat& i1 = input_mat1;
     Mat& i2 = input_mat2;
     //Offset to account for multiplication scaling factor in fixed point
-    output[0][0] = ar_shift_right(uint16_t(i1[0][0]*i2[0][0]) + uint16_t(i1[0][1]*i2[1][0]) + uint16_t(i1[0][2]*i2[2][0]) + uint16_t(i1[0][3]*i2[3][0]), 4);
-    output[0][1] = ar_shift_right(uint16_t(i1[0][0]*i2[0][1]) + uint16_t(i1[0][1]*i2[1][1]) + uint16_t(i1[0][2]*i2[2][1]) + uint16_t(i1[0][3]*i2[3][1]), 4);
-    output[0][2] = ar_shift_right(uint16_t(i1[0][0]*i2[0][2]) + uint16_t(i1[0][1]*i2[1][2]) + uint16_t(i1[0][2]*i2[2][2]) + uint16_t(i1[0][3]*i2[3][2]), 4);
-    output[0][3] = ar_shift_right(uint16_t(i1[0][0]*i2[0][3]) + uint16_t(i1[0][1]*i2[1][3]) + uint16_t(i1[0][2]*i2[2][3]) + uint16_t(i1[0][3]*i2[3][3]), 4);
-    output[1][0] = ar_shift_right(uint16_t(i1[1][0]*i2[0][0]) + uint16_t(i1[1][1]*i2[1][0]) + uint16_t(i1[1][2]*i2[2][0]) + uint16_t(i1[1][3]*i2[3][0]), 4);
-    output[1][1] = ar_shift_right(uint16_t(i1[1][0]*i2[0][1]) + uint16_t(i1[1][1]*i2[1][1]) + uint16_t(i1[1][2]*i2[2][1]) + uint16_t(i1[1][3]*i2[3][1]), 4);
-    output[1][2] = ar_shift_right(uint16_t(i1[1][0]*i2[0][2]) + uint16_t(i1[1][1]*i2[1][2]) + uint16_t(i1[1][2]*i2[2][2]) + uint16_t(i1[1][3]*i2[3][2]), 4);
-    output[1][3] = ar_shift_right(uint16_t(i1[1][0]*i2[0][3]) + uint16_t(i1[1][1]*i2[1][3]) + uint16_t(i1[1][2]*i2[2][3]) + uint16_t(i1[1][3]*i2[3][3]), 4);
-    output[2][0] = ar_shift_right(uint16_t(i1[2][0]*i2[0][0]) + uint16_t(i1[2][1]*i2[1][0]) + uint16_t(i1[2][2]*i2[2][0]) + uint16_t(i1[2][3]*i2[3][0]), 4);
-    output[2][1] = ar_shift_right(uint16_t(i1[2][0]*i2[0][1]) + uint16_t(i1[2][1]*i2[1][1]) + uint16_t(i1[2][2]*i2[2][1]) + uint16_t(i1[2][3]*i2[3][1]), 4);
-    output[2][2] = ar_shift_right(uint16_t(i1[2][0]*i2[0][2]) + uint16_t(i1[2][1]*i2[1][2]) + uint16_t(i1[2][2]*i2[2][2]) + uint16_t(i1[2][3]*i2[3][2]), 4);
-    output[2][3] = ar_shift_right(uint16_t(i1[2][0]*i2[0][3]) + uint16_t(i1[2][1]*i2[1][3]) + uint16_t(i1[2][2]*i2[2][3]) + uint16_t(i1[2][3]*i2[3][3]), 4);
-    output[3][0] = ar_shift_right(uint16_t(i1[3][0]*i2[0][0]) + uint16_t(i1[3][1]*i2[1][0]) + uint16_t(i1[3][2]*i2[2][0]) + uint16_t(i1[3][3]*i2[3][0]), 4);
-    output[3][1] = ar_shift_right(uint16_t(i1[3][0]*i2[0][1]) + uint16_t(i1[3][1]*i2[1][1]) + uint16_t(i1[3][2]*i2[2][1]) + uint16_t(i1[3][3]*i2[3][1]), 4);
-    output[3][2] = ar_shift_right(uint16_t(i1[3][0]*i2[0][2]) + uint16_t(i1[3][1]*i2[1][2]) + uint16_t(i1[3][2]*i2[2][2]) + uint16_t(i1[3][3]*i2[3][2]), 4);
-    output[3][3] = ar_shift_right(uint16_t(i1[3][0]*i2[0][3]) + uint16_t(i1[3][1]*i2[1][3]) + uint16_t(i1[3][2]*i2[2][3]) + uint16_t(i1[3][3]*i2[3][3]), 4);
+    output[0][0] = mat_mul_entry(i1, i2, 0, 0);
+    output[0][1] = mat_mul_entry(i1, i2, 0, 1);
+    output[0][2] = mat_mul_entry(i1, i2, 0, 2);
+    output[0][3] = mat_mul_entry(i1, i2, 0, 3);
+    output[1][0] = mat_mul_entry(i1, i2, 1, 0);
+    output[1][1] = mat_mul_entry(i1, i2, 1, 1);
+    output[1][2] = mat_mul_entry(i1, i2, 1, 2);
+    output[1][3] = mat_mul_entry(i1, i2, 1, 3);
+    output[2][0] = mat_mul_entry(i1, i2, 2, 0);
+    output[2][1] = mat_mul_entry(i1, i2, 2, 1);
+    output[2][2] = mat_mul_entry(i1, i2, 2, 2);
+    output[2][3] = mat_mul_entry(i1, i2, 2, 3);
+    output[3][0] = mat_mul_entry(i1, i2, 3, 0);
+    output[3][1] = mat_mul_entry(i1, i2, 3, 1);
+    output[3][2] = mat_mul_entry(i1, i2, 3, 2);
+    output[3][3] = mat_mul_entry(i1, i2, 3, 3);
 
     i1 = output;
 }
