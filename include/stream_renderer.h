@@ -108,8 +108,33 @@ struct StreamByte {
 
 struct ColourTable {
     static const uint32_t COLOUR_SIZE = 3; //each colour is 3 bytes
-    uint32_t size;
-    std::vector<Colour> entries;
+    static const uint32_t CACHE_SIZE = 4;
+    static const uint32_t PLRU_SIZE = 3;
+
+    bool cache_valid = false;
+    uint32_t table_addr = 0;
+    uint32_t size = 0;
+
+    ColourTable(std::unique_ptr<vpu::mem::Memory>& memory);
+    bool read_cache(uint32_t index, uint32_t& colour);
+    void initialise(uint32_t addr);
+    void invalidate();
+
+private:
+    std::unique_ptr<vpu::mem::Memory>& memory;
+
+    //Fetch and render shared variables
+    uint32_t memory_request_head = 0;
+    bool memory_return_valid = false;
+    Defer<std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH>> memory_return;
+
+    std::array<uint32_t,CACHE_SIZE> cache_address;
+    std::array<Colour,CACHE_SIZE> cache_data;
+    std::array<bool,CACHE_SIZE> presence = {false,false,false,false};
+    std::array<bool,PLRU_SIZE> plru = {false,false,false};
+
+    //Return the next way to use and automatically update the plru
+    uint8_t update_plru();
 };
 
 struct Stream {
@@ -118,6 +143,8 @@ struct Stream {
     uint32_t byte_count;
     ColourTable colour_table;
     std::vector<StreamByte> stream;
+
+    Stream(std::unique_ptr<vpu::mem::Memory>& memory);
 };
 
 const uint32_t VOXEL_BYTES = 12;
@@ -217,7 +244,7 @@ class StreamRenderer : public Subsystem<Command> {
     void render_cycle();
     void render_cycle_data_fetch();
     void render_cycle_process_byte();
-    void render_cycle_submit_voxel();
+    void render_cycle_submit_voxel(uint32_t colour);
     void render_cycle_advance(uint8_t count);
 
 public:

@@ -5,6 +5,91 @@
 
 namespace vpu::stream {
 
+ColourTable::ColourTable(std::unique_ptr<vpu::mem::Memory>& memory)
+    : memory(memory), memory_return({})
+{
+
+}
+
+void ColourTable::initialise(uint32_t addr) {
+    cache_valid = true;
+    table_addr = addr;
+}
+
+void ColourTable::invalidate() {
+    presence = {false,false,false,false};
+    plru = {false,false,false};
+    memory_return_valid = false;
+    cache_valid = false;
+}
+
+uint8_t ColourTable::update_plru() {
+    uint8_t index = 0;
+
+    index |= plru[2] ? 0b10 : 0b00;
+    index |= plru[2] ? plru[1] : plru[0];
+
+    uint8_t leaf;
+    if (index & 0b10) {
+        plru[2] = 0;
+        leaf = 1;
+    } else {
+        plru[2] = 1;
+        leaf = 0;
+    }
+
+    if (index & 0b01) {
+        plru[leaf] = 0;
+    } else {
+        plru[leaf] = 1;
+    }
+
+    return index;
+}
+
+bool ColourTable::read_cache(uint32_t index, uint32_t& colour) {
+    assert(index < size);
+    assert(cache_valid);
+
+    bool present = false;
+    uint32_t addr;
+    for (int i = 0; i < CACHE_SIZE; i++) {
+        if (presence[i] && cache_address[i] == index) {
+            present = true;
+            addr = i;
+        }
+    }
+
+    if (!present) {
+        uint32_t req_addr = table_addr + (COLOUR_SIZE*index);
+        uint32_t req_head = req_addr & ~uint32_t(0x3F);
+
+        //Previous cycle got the data
+        if (memory_return_valid && req_head == memory_request_head && memory_return.can_run()) {
+            uint8_t evict_way = update_plru();
+            cache_data[evict_way].R = memory_return.data[req_addr-req_head+0];
+            cache_data[evict_way].G = memory_return.data[req_addr-req_head+1];
+            cache_data[evict_way].B = memory_return.data[req_addr-req_head+2];
+            cache_address[evict_way] = index;
+            presence[evict_way] = true;
+            addr = evict_way;
+        } else {
+            memory_request_head = req_head;
+            memory_return_valid = true;
+            memory_return = memory->read(memory_request_head);
+            return false;
+        }
+    }
+
+    Colour c = cache_data[addr];
+    colour |= c.R << 24;
+    colour |= c.G << 16;
+    colour |= c.B << 8;
+    colour |= 0xFF;
+
+    return true;
+}
+
 bool StreamByte::terminal() {
     return (0x80 & data);
 }
@@ -25,8 +110,10 @@ uint8_t StreamByte::colour_index() {
     return 0x7F & data;
 }
 
+Stream::Stream(std::unique_ptr<vpu::mem::Memory>& memory) : colour_table(memory) {}
+
 StreamRenderer::StreamRenderer(std::unique_ptr<vpu::mem::Memory>& memory)
-    : memory(memory), memory_return({})
+    : memory(memory), memory_return({}), active_stream(memory)
 {
 
 }
@@ -71,6 +158,7 @@ void StreamRenderer::run_cycle() {
         if (output_queue.size() == 0){
             state = State::FINISHED;
             render_state = RenderState::IDLE;
+            active_stream.colour_table.invalidate();
         }
         return;
     }
@@ -92,6 +180,8 @@ void StreamRenderer::data_fetch_cycle() {
     if (!stream_fetch_complete) {
         data_fetch_cycle_request(working_command.stream_address, STREAM_HEADER_BYTES, &StreamRenderer::update_active_stream);
         if (request_got_bytes == STREAM_HEADER_BYTES) {
+            //Activate the cache for this request. The colour table is located immediately after the header
+            active_stream.colour_table.initialise(working_command.stream_address + STREAM_HEADER_BYTES);
             reset_fetch();
             stream_fetch_complete = true;
         }
@@ -206,6 +296,7 @@ void StreamRenderer::render_cycle() {
     if (processed_byte_count + working_command.start_offset >= working_command.end_offset ||
         processed_byte_count >= active_stream.byte_count) {
         render_state = RenderState::DRAIN;
+        active_stream.colour_table.invalidate();
         return;
     }
 
@@ -275,15 +366,18 @@ void StreamRenderer::render_cycle_process_byte() {
         } else { //Write voxels of group
             uint32_t voxel_capacity = max_queue_len - output_queue.size();
             uint32_t max_accepted_voxels = std::min(uint32_t(8), std::min(byte_voxel_count, voxel_capacity));
+            uint32_t colour;
+            bool hit = active_stream.colour_table.read_cache(colour_index, colour);
+            if (hit) {
+                for (int i = 0; i < max_accepted_voxels; i++) {
+                    render_cycle_submit_voxel(colour); //Calculate output of next_to_render
+                    render_cycle_advance(1);
+                    byte_voxel_count--;
+                }
 
-            for (int i = 0; i < max_accepted_voxels; i++) {
-                render_cycle_submit_voxel(); //Calculate output of next_to_render
-                render_cycle_advance(1);
-                byte_voxel_count--;
+                //completed
+                if (byte_voxel_count == 0) advance_byte = true;
             }
-
-            //completed
-            if (byte_voxel_count == 0) advance_byte = true;
         }
     }
 
@@ -332,7 +426,7 @@ void StreamRenderer::render_cycle_advance(uint8_t count) {
     }
 }
 
-void StreamRenderer::render_cycle_submit_voxel() {
+void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
     if (
         next_to_render.x < active_stream.start.x || next_to_render.x > active_stream.end.x ||
         next_to_render.y < active_stream.start.y || next_to_render.y > active_stream.end.y ||
@@ -374,7 +468,7 @@ void StreamRenderer::render_cycle_submit_voxel() {
 
     if (x >= vpu::defs::FRAMEBUFFER_WIDTH || y >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
     uint32_t address = vpu::blit::Blitter::pixel_address(x, y);
-    output_queue.push_back(Defer<q_entry>({address, 0xFFFFFFFF}));
+    output_queue.push_back(Defer<q_entry>({address, colour}));
 }
 
 void StreamRenderer::write_queue() {
