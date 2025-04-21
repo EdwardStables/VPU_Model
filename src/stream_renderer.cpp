@@ -48,8 +48,13 @@ uint8_t ColourTable::update_plru() {
 }
 
 bool ColourTable::read_cache(uint32_t index, uint32_t& colour) {
-    assert(index < size);
     assert(cache_valid);
+
+    //Special case for colour to use when the colour table is empty
+    if (size == 0) {
+        colour = 0xFFFFFFFF;
+        return true;
+    }
 
     bool present = false;
     uint32_t addr;
