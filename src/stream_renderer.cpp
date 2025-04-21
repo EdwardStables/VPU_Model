@@ -87,6 +87,7 @@ bool ColourTable::read_cache(uint32_t index, uint32_t& colour) {
     }
 
     Colour c = cache_data[addr];
+    colour = 0;
     colour |= c.R << 24;
     colour |= c.G << 16;
     colour |= c.B << 8;
