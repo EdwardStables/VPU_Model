@@ -30,9 +30,14 @@ class Blitter : public Subsystem<Command> {
     void pixel_cycle();
     void string_cycle();
     void clear_cycle();
+
+
+    bool clear_pixels_not_depth = true;
+
 public:
     //Utility also used in other pipelines
     static uint32_t pixel_address(uint32_t x, uint32_t y);
+    static uint32_t depth_address(uint32_t x, uint32_t y);
 
     Blitter(std::unique_ptr<vpu::mem::Memory>& memory);
     virtual bool submit();

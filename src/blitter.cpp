@@ -17,6 +17,15 @@ uint32_t Blitter::pixel_address(uint32_t x, uint32_t y) {
     return offset + defs::FRAMEBUFFER_ADDR;
 }
 
+uint32_t Blitter::depth_address(uint32_t x, uint32_t y) {
+    assert(x < defs::FRAMEBUFFER_WIDTH);
+    assert(y < defs::FRAMEBUFFER_HEIGHT);
+    uint32_t offset = x * defs::DEPTHBUFFER_DEPTH_BYTES;
+    offset += y * defs::DEPTHBUFFER_DEPTH_BYTES * defs::FRAMEBUFFER_WIDTH;
+    assert(offset < defs::DEPTHBUFFER_BYTES); //ensure calculated address is within framebuffer
+    return offset + defs::DEPTHBUFFER_ADDR;
+}
+
 void Blitter::pixel_cycle() {
     memory->write_word(pixel_address(working_command.xpos, working_command.ypos), working_command.colour);
     state = State::FINISHED;
@@ -73,30 +82,57 @@ void Blitter::string_cycle() {
 }
 
 void Blitter::clear_cycle() {
+    if (working_command.ypos >= defs::FRAMEBUFFER_HEIGHT) {
+        if (clear_pixels_not_depth) {
+            clear_pixels_not_depth = false;
+            working_command.xpos = 0;
+            working_command.ypos = 0;
+        } else {
+            state = State::FINISHED;
+            return;
+        }
+    }
+
     std::array<uint8_t,vpu::defs::MEM_ACCESS_WIDTH> data;
     assert(vpu::defs::MEM_ACCESS_WIDTH == 4 * vpu::defs::BLITTER_MAX_PIXELS);
 
-    if (working_command.ypos >= defs::FRAMEBUFFER_HEIGHT) {
-        state = State::FINISHED;
-        return;
-    }
+    if (clear_pixels_not_depth) {
+        for (int i = 0; i < defs::BLITTER_MAX_PIXELS; i++) {
+            data[4*i]   = working_command.colour >> 24;
+            data[4*i+1] = (working_command.colour >> 16) & 0xFF;
+            data[4*i+2] = (working_command.colour >> 8) & 0xFF;
+            data[4*i+3] = working_command.colour & 0xFF;
+        }
 
-    for (int i = 0; i < defs::BLITTER_MAX_PIXELS; i++) {
-        data[4*i]   = working_command.colour >> 24;
-        data[4*i+1] = (working_command.colour >> 16) & 0xFF;
-        data[4*i+2] = (working_command.colour >> 8) & 0xFF;
-        data[4*i+3] = working_command.colour & 0xFF;
-    }
+        uint32_t write_addr = pixel_address(working_command.xpos, working_command.ypos);
+        assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+        memory->write(write_addr, data);
 
-    uint32_t write_addr = pixel_address(working_command.xpos, working_command.ypos);
-    assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
-    memory->write(write_addr, data);
+        //Will overwrite end of buffer, but that should be ok for now
+        working_command.xpos += defs::BLITTER_MAX_PIXELS;
+        while (working_command.xpos >= defs::FRAMEBUFFER_WIDTH) {
+            working_command.xpos -= defs::FRAMEBUFFER_WIDTH;
+            working_command.ypos++;
+        }
+    } else {
+        //Depth buffer is just largest possible value, note that it's 16 bits so
+        //this is actually 2x BLITTER_MAX_PIXELS
+        for (int i = 0; i < defs::BLITTER_MAX_PIXELS; i++) {
+            data[4*i]   = 0xFF;
+            data[4*i+1] = 0xFF;
+            data[4*i+2] = 0xFF;
+            data[4*i+3] = 0xFF;
+        }
 
-    //Will overwrite end of buffer, but that should be ok for now
-    working_command.xpos += defs::BLITTER_MAX_PIXELS;
-    while (working_command.xpos >= defs::FRAMEBUFFER_WIDTH) {
-        working_command.xpos -= defs::FRAMEBUFFER_WIDTH;
-        working_command.ypos++;
+        uint32_t write_addr = depth_address(working_command.xpos, working_command.ypos);
+        assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+        memory->write(write_addr, data);
+
+        working_command.xpos += 2*defs::BLITTER_MAX_PIXELS;
+        while (working_command.xpos >= defs::FRAMEBUFFER_WIDTH) {
+            working_command.xpos -= defs::FRAMEBUFFER_WIDTH;
+            working_command.ypos++;
+        }
     }
 }
 
@@ -123,6 +159,7 @@ bool Blitter::submit() {
     if (working_command.operation == Operation::CLEAR){
         working_command.xpos = 0;
         working_command.ypos = 0;
+        clear_pixels_not_depth = true;
     }
     if (working_command.operation == Operation::STRING){
         working_command.character_vscan = 0;

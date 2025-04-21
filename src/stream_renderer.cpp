@@ -474,17 +474,35 @@ void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
 
     if (x >= vpu::defs::FRAMEBUFFER_WIDTH || y >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
     uint32_t address = vpu::blit::Blitter::pixel_address(x, y);
-    output_queue.push_back(Defer<q_entry>({address, colour}));
+    uint32_t depth_address = vpu::blit::Blitter::depth_address(x, y);
+    output_queue.push_back(Defer<q_entry>({address, colour, depth_address, z}));
 }
 
 void StreamRenderer::write_queue() {
     if (output_queue.size() == 0) return;
     if (!output_queue.front().can_run()) return;
 
-    auto [address, pixel] = output_queue.front().data;
+    auto [pixel_address, pixel, depth_address, depth] = output_queue.front().data;
     output_queue.pop_front();
 
-    memory->write_word(address, pixel);
+    //TODO this doesn't account for read times
+    uint32_t current_depth_req = memory->read_word(depth_address & 0xFFFFFFFC);
+    uint16_t current_depth = (depth_address & 0x10 ? (current_depth_req >> 16) : current_depth_req) & 0xFFFF;
+
+    if (depth <= current_depth) {
+        std::cout << "write pixel " << pixel << " to address " << pixel_address << "\n";
+        memory->write_word(pixel_address, pixel);
+        
+        if (depth_address & 0x10) {
+            current_depth_req &= 0xFFFF;
+            current_depth_req |= uint32_t(depth) << 16;
+        } else {
+            current_depth_req &= 0xFFFF0000;
+            current_depth_req |= uint32_t(depth);
+        }
+
+        memory->write_word(depth_address & 0xFFFFFFFC, current_depth_req);
+    }
 }
 
 }
