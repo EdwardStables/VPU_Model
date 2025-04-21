@@ -16,7 +16,7 @@ The initial rendering system. Takes an address to a single stream object and upd
 This accounts for camera position and perspective.
 
 All other features are hard-coded, this is a test system to build upon and will be mostly replaced as development progresses.
-Obvious things that are not handled/considered:
+Obvious things that are not yet handled/considered:
 - texturing
 - lighting
 - non-default materials
@@ -26,41 +26,55 @@ Obvious things that are not handled/considered:
 */
 
 /*
-Streams are a simple variable length base unit of rendering non-trivial objects. They take in two base voxels, providing
-start and end points in world space (the second voxel is assumed to be greater than the first in every dimension). If the two voxels are the same
-then a single output voxel is rendered.
+Streams are a simple variable length base unit of rendering non-trivial objects. They consist of a header structure defining bounds and
+a colour table, and then a run-length encoding of voxels information within the bounds.
 
-The volume defined between these voxels has presence/lack thereof provided via run-length encoding, dimensions incrementing first in
-x, then y, then z. Encoding is byte based:
+Format:
+Field           | Length            | Usage
+----------------|-------------------|-------------------------------------
+Start           | 3*32              | Origin voxel position. Usually 0.
+End             | 3*32              | End voxel position. Must be greater than Start in all dimensions
+Colour Count    | 32                | The number of colour table entries. 0 is an empty table where all voxels are white. The maximal allowed value is 128, 32 bits here for alignment and decoding ease
+Stream Size     | 32                | The number of bytes that make up the stream
+Colour Table    | 24*Colour Count   | Tightly packed RGB values 
+Stream          | 8*Stream Size     | The actual voxel data
 
+The volume defined between the start/end voxels has presence/lack thereof provided via run-length encoding, dimensions incrementing first in
+x, then y, then z. Encoding is byte based with each entry made up of a group of one or more bytes. The MSB is set for the final byte in a group.
+This allows for extension with additional formatting in future. Current data bytes are:
+
+- Length byte - Defines a 6-bit length and a voxel presence value
+- Colour byte - Defines a 7-bit index into the colour table
+
+Length byte:
 Bit | Meaning
-7   | Set for length, unset for mask
-6   | For length, set defines voxel presence, unset defines no voxels
-5-0 | For length defines the size of the length
-6-0 | For mask provides a mask of the next 7 voxels
+----|----------------------------------------------------------------------
+7   | Set when this is the last byte in a sequence, otherwise interpret the following byte as a colour index
+6   | Set defines voxel presence, unset defines no voxels
+5-0 | Defines the size of the length
 
-The initial implementation will not use mask mode.
+Colour byte:
+Bit | Meaning
+----|----------------------------------------------------------------------
+7   | Set when this is the last byte in a sequence, for current format this should always be set
+6-0 | Defines colour table index
 
 For example, a 3x3x3 space has 9 voxel positions. If the first two Z layers are entirely filled and the final Z layer only contains a single voxel
-in the central position then the following encoding would be used:
+in the central position then the following encoding would be used, with no colour values set:
 
 Byte  | 0        | 1        | 2        | 3
 Value | 11010010 | 10000100 | 11000001 | 10000100
 
 Byte 1 defines the 16 set voxels in the top two Z layers, byte 1 defines the first 4 unset voxels in final Z layer, byte 2 defines the single set voxel in the
-final Z layer, and byte 3 defines the final 4 unset voxels.
+final Z layer, and byte 3 defines the final 4 unset voxels. As no colour information is used this will take index zero in the colour table.
 
-This could alternatively be represented entirely using the mask format:
+The same positions could set a different colour for the entire stream:
+Byte  | 0        | 1        | 2        | 3        | 4
+Value | 01010010 | 10000001 | 10000100 | 11000001 | 10000100
 
-Byte  | 0        | 1        | 2        | 3
-Value | 01111111 | 01111111 | 01111000 | 00100000
+Which would set all voxels to use the colour defined at colour table entry 0. Bytes 0 and 1 are a single group. Bytes 2, 3, and 4 
+are each their own group.
 
-Note that this actually defines 28 voxels, not the 27 in the volume. Excess voxels are ignored.
-
-A more efficient 3-byte packing could be done with a combination of mask and length formats:
-
-Byte  | 0        | 1        | 2       
-Value | 11010010 | 00000100 | 00000000
 */
 
 namespace vpu::stream {
@@ -71,22 +85,45 @@ struct Voxel {
     uint32_t z;
 };
 
-struct StreamByte {
-    enum class Type { Length, Mask };
-    uint8_t data;
-    Type type();
-    uint8_t length();
+struct Colour {
+    uint8_t R;
+    uint8_t G;
+    uint8_t B;
 };
 
-//Mimics memory layout, packed in harware
+struct StreamByte {
+    uint8_t data;
+    //Is the terminal bit set
+    bool terminal();
+    //Bits 0-7
+    uint8_t value();
+
+    //Length 
+    uint8_t length_size();
+    bool length_presence();
+
+    //Colour
+    uint8_t colour_index();
+};
+
+struct ColourTable {
+    static const uint32_t COLOUR_SIZE = 3; //each colour is 3 bytes
+    uint32_t size;
+    std::vector<Colour> entries;
+};
+
 struct Stream {
     Voxel start;
     Voxel end;
     uint32_t byte_count;
+    ColourTable colour_table;
     std::vector<StreamByte> stream;
 };
+
 const uint32_t VOXEL_BYTES = 12;
-const uint32_t STREAM_HEADER_BYTES = (2*VOXEL_BYTES) + 4;
+const uint32_t COLOUR_TABLE_SIZE_BYTES = 4;
+const uint32_t STREAM_SIZE_BYTES = 4;
+const uint32_t STREAM_HEADER_BYTES = (2*VOXEL_BYTES) + COLOUR_TABLE_SIZE_BYTES + STREAM_SIZE_BYTES;
 const uint32_t TRANSFORM_BYTES = 16*2;
 
 /*
@@ -129,6 +166,8 @@ enum class RenderState {
 class StreamRenderer : public Subsystem<Command> {
     Stream active_stream;
     RenderState render_state = RenderState::IDLE;
+    uint32_t colour_table_addr;
+    uint8_t colour_table_size;
 
     //Fetch and render shared variables
     uint32_t memory_request_head = 0;
@@ -144,9 +183,15 @@ class StreamRenderer : public Subsystem<Command> {
 
     //Render specific variables
     StreamByte active_byte;
+    bool process_sequence = false;
+    uint8_t sequence_byte = 0;
     uint32_t processed_byte_count = 0;
     uint32_t internal_buffer_offset = 0;
+
     uint32_t byte_voxel_count = 0;
+    uint8_t colour_index = 0;
+    bool draw_voxel = false;
+
     Voxel next_to_render;
 
     using q_entry = std::pair<uint32_t,uint32_t>;

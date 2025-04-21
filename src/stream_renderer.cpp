@@ -5,16 +5,24 @@
 
 namespace vpu::stream {
 
-StreamByte::Type StreamByte::type() {
-    return (0x80 & data) ? Type::Length : Type::Mask;
+bool StreamByte::terminal() {
+    return (0x80 & data);
 }
 
-uint8_t StreamByte::length() {
-    switch(type()){
-        case Type::Length: return (0x3F&data)+1;
-        case Type::Mask: return 7;
-        default: assert(false);
-    }
+uint8_t StreamByte::value() {
+    return 0x7F & data;
+}
+
+uint8_t StreamByte::length_size() {
+    return (0x3F & data) + 1;
+}
+
+bool StreamByte::length_presence() {
+    return 0x40 & data;
+}
+
+uint8_t StreamByte::colour_index() {
+    return 0x7F & data;
 }
 
 StreamRenderer::StreamRenderer(std::unique_ptr<vpu::mem::Memory>& memory)
@@ -148,7 +156,8 @@ void StreamRenderer::update_active_stream(uint32_t header_index, uint8_t byte) {
         case 3: selected_field = &active_stream.end.x; break;
         case 4: selected_field = &active_stream.end.y; break;
         case 5: selected_field = &active_stream.end.z; break;
-        case 6: selected_field = &active_stream.byte_count; break;
+        case 6: selected_field = &active_stream.colour_table.size; break;
+        case 7: selected_field = &active_stream.byte_count; break;
         default: assert(false);
     }
 
@@ -192,6 +201,14 @@ void StreamRenderer::render_cycle() {
     A higher performance approach would have a double buffer where one is fetched to while
     the other is rendered
     */
+
+    //Done rendering this portion, or the entire stream
+    if (processed_byte_count + working_command.start_offset >= working_command.end_offset ||
+        processed_byte_count >= active_stream.byte_count) {
+        render_state = RenderState::DRAIN;
+        return;
+    }
+
     if (memory_return_valid == false) {
         render_cycle_data_fetch();
     } else {
@@ -202,15 +219,9 @@ void StreamRenderer::render_cycle() {
 }
 
 void StreamRenderer::render_cycle_data_fetch() {
-    //Done rendering this portion, or the entire stream
-    if (processed_byte_count + working_command.start_offset >= working_command.end_offset ||
-        processed_byte_count >= active_stream.byte_count) {
-        render_state = RenderState::DRAIN;
-        return;
-    }
-
     uint32_t next_stream_byte_addr = working_command.stream_address +
                                      STREAM_HEADER_BYTES +
+                                     active_stream.colour_table.size * ColourTable::COLOUR_SIZE +
                                      working_command.start_offset +
                                      processed_byte_count;
 
@@ -231,50 +242,49 @@ void StreamRenderer::render_cycle_process_byte() {
     assert(memory_return_valid);
     if (!memory_return.can_run()) return;
     
-    //This is starting a new voxel
-    if (byte_voxel_count == 0) {
+    //*** Update internal state with current byte ***//
+    if (!process_sequence) { //If processing then the header has already been read
         active_byte = {memory_return.data[internal_buffer_offset]};
+        switch (sequence_byte) {
+            case 0: //Length value
+                byte_voxel_count = active_byte.length_size();
+                draw_voxel = active_byte.length_presence();
+                break;
+            case 1: //Colour value
+                colour_index = active_byte.colour_index();
+                break;
+            default:
+                assert(false); //We only have two byte sequences
+        }
     }
 
+    //*** Determine action ***/
     bool advance_byte = false;
-
-    //If it's an unset length then just update the next position by the length
-    if (active_byte.type() == StreamByte::Type::Length && !(active_byte.data&0x40)) {
-        render_cycle_advance(active_byte.length());
-        advance_byte = true;
-    } else
-    //Must be set, we can only accept up to 8 voxels
-    if (active_byte.type() == StreamByte::Type::Length) {
-        uint32_t remaining_voxels = active_byte.length() - byte_voxel_count;
-        uint32_t voxel_capacity = max_queue_len - output_queue.size();
-        uint32_t max_accepted_voxels = std::min(uint32_t(8), std::min(remaining_voxels, voxel_capacity));
-
-        for (int i = 0; i < max_accepted_voxels; i++) {
-            render_cycle_submit_voxel(); //Calculate output of next_to_render
-            render_cycle_advance(1);
-            remaining_voxels--;
-            byte_voxel_count++;
-        }
-
-        //completed
-        if (remaining_voxels == 0) advance_byte = true;
+    if (active_byte.terminal()) {
+        process_sequence = true;
     } else {
-        assert(active_byte.type() == StreamByte::Type::Mask);
+        advance_byte = true;
+    }
 
-        uint32_t remaining_voxels = active_byte.length() - byte_voxel_count;
-        uint32_t voxel_capacity = max_queue_len - output_queue.size();
-        uint32_t max_accepted_voxels = std::min(uint32_t(8), std::min(remaining_voxels, voxel_capacity));
+    //Read the sequence and state is updated
+    if (process_sequence) {
+        if (!draw_voxel) { //Empty group
+            render_cycle_advance(byte_voxel_count);
+            byte_voxel_count = 0; //Can accept any number in the increment
+            advance_byte = true;
+        } else { //Write voxels of group
+            uint32_t voxel_capacity = max_queue_len - output_queue.size();
+            uint32_t max_accepted_voxels = std::min(uint32_t(8), std::min(byte_voxel_count, voxel_capacity));
 
-        for (int i = 0; i < max_accepted_voxels; i++) {
-            if (active_byte.data & (1<<(6-i))) //Check the mask before actually rendering
-                render_cycle_submit_voxel();
-            render_cycle_advance(1);
-            remaining_voxels--;
-            byte_voxel_count++;
+            for (int i = 0; i < max_accepted_voxels; i++) {
+                render_cycle_submit_voxel(); //Calculate output of next_to_render
+                render_cycle_advance(1);
+                byte_voxel_count--;
+            }
+
+            //completed
+            if (byte_voxel_count == 0) advance_byte = true;
         }
-
-        //completed
-        if (remaining_voxels == 0) advance_byte = true;
     }
 
     if (advance_byte) {
@@ -282,8 +292,14 @@ void StreamRenderer::render_cycle_process_byte() {
         //TODO: overlap request on this cycle, or implement double buffering
         processed_byte_count++;
         internal_buffer_offset++;
-        byte_voxel_count = 0;
+        sequence_byte++;
         if (internal_buffer_offset >= vpu::defs::MEM_ACCESS_WIDTH) memory_return_valid = false;
+
+        if (process_sequence) { //reset sequence state
+            sequence_byte = 0;
+            process_sequence = false;
+            assert(byte_voxel_count == 0);
+        }
     }
 }
 
