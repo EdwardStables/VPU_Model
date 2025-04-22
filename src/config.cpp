@@ -73,6 +73,7 @@ Config parse_arguments(int argc, char *argv[]) {
         {"dump_regs",         Config::OptArg::OptString( "--dump_regs",        "-r", "Dump the register state in a file after completion")},
         {"dump_mem",          Config::OptArg::OptString( "--dump_mem",         "-m", "Dump the memory buffer in a file after completion")},
         {"dump_framebuffer",  Config::OptArg::OptString( "--dump_framebuffer", "-f", "Dump the active framebuffer to a png file in the given directory. Directory must exist, files are numbered incrementally.")},
+        {"dump_depthbuffer",  Config::OptArg::OptString( "--dump_depthbuffer", "-b", "Dump the active depthbuffer to a png file in the given directory. Directory must exist, files are numbered incrementally.")},
         {"wait",              Config::OptArg::OptBoolean("--wait",             "-w", "Run the simulation to completion but don't exit")},
     };
 
@@ -203,6 +204,7 @@ Config parse_arguments(int argc, char *argv[]) {
     config.dump_regs = std::get<std::string>(optional_arguments["dump_regs"].value);
     config.dump_mem = std::get<std::string>(optional_arguments["dump_mem"].value);
     config.dump_framebuffer = std::get<std::string>(optional_arguments["dump_framebuffer"].value);
+    config.dump_depthbuffer = std::get<std::string>(optional_arguments["dump_depthbuffer"].value);
     config.inspector = std::get<bool>(optional_arguments["inspect"].value);
     config.wait = std::get<bool>(optional_arguments["wait"].value);
 

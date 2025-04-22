@@ -221,7 +221,7 @@ class StreamRenderer : public Subsystem<Command> {
 
     Voxel next_to_render;
 
-    using q_entry = std::tuple<uint32_t,uint32_t,uint32_t,uint16_t>;
+    using q_entry = std::tuple<uint32_t,uint32_t,uint32_t,uint8_t>;
     std::deque<Defer<q_entry>> output_queue;
     //bit of a bodge; account for limited writeback width
     //when we can't unify data and would have to stall pipeline.

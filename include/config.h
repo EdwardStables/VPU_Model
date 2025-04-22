@@ -40,6 +40,7 @@ struct Config {
     std::string dump_regs = "";
     std::string dump_mem = "";
     std::string dump_framebuffer = "";
+    std::string dump_depthbuffer = "";
 #ifdef RPC
     bool inspector = false;
 #endif

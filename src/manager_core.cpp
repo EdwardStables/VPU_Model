@@ -682,9 +682,11 @@ void ManagerCore::stage_execute() {
             return;
         }
 
-        //Framebuffer dump
-        if (input.opcode == vpu::defs::P_BLI_SWP && config.dump_framebuffer.length() != 0) {
-            write_framebuffer();
+        if (input.opcode == vpu::defs::P_BLI_SWP) {
+            //Framebuffer dump
+            if (config.dump_framebuffer.length() != 0) write_framebuffer();
+            if (config.dump_depthbuffer.length() != 0) write_depthbuffer();
+            frames_written++;
         }
     }
     frontend_stall = false;
@@ -858,6 +860,28 @@ std::string ManagerCore::trace_string() {
     return op;
 }
 
+void ManagerCore::write_depthbuffer() {
+    std::stringstream output_file_ss;
+    output_file_ss <<  config.dump_depthbuffer + "/frame_";
+    output_file_ss << std::setw(5) << std::setfill('0') << std::to_string(frames_written);
+    output_file_ss << ".png";
+    std::string output_file = output_file_ss.str();
+    std::cout << "Writing out depthbuffer to " << output_file << std::endl;
+    
+    int x = vpu::defs::FRAMEBUFFER_WIDTH;
+    int y = vpu::defs::FRAMEBUFFER_HEIGHT;
+    int comp = 1; //16-bit one channel
+    int stride = vpu::defs::FRAMEBUFFER_WIDTH * vpu::defs::DEPTHBUFFER_DEPTH_BYTES;
+
+    auto& all_mem = vpu::mem::MemorySnooper::get_data(memory.get());
+    void* data = (&(all_mem[0])) + vpu::defs::DEPTHBUFFER_ADDR;
+
+    int r = stbi_write_png(output_file.c_str(), x, y, comp, data, stride);
+    if (r == 0) {
+        std::cerr << "Failed to write frame " << frames_written << std::endl;
+    }
+}
+
 void ManagerCore::write_framebuffer() {
     std::stringstream output_file_ss;
     output_file_ss <<  config.dump_framebuffer + "/frame_";
@@ -878,7 +902,6 @@ void ManagerCore::write_framebuffer() {
     if (r == 0) {
         std::cerr << "Failed to write frame " << frames_written << std::endl;
     }
-    frames_written++;
 }
 
 uint32_t ManagerCore::get_int_literal(uint32_t instruction) {

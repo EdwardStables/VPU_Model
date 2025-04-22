@@ -475,7 +475,7 @@ void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
     if (x >= vpu::defs::FRAMEBUFFER_WIDTH || y >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
     uint32_t address = vpu::blit::Blitter::pixel_address(x, y);
     uint32_t depth_address = vpu::blit::Blitter::depth_address(x, y);
-    output_queue.push_back(Defer<q_entry>({address, colour, depth_address, z}));
+    output_queue.push_back(Defer<q_entry>({address, colour, depth_address, 0xFF & z}));
 }
 
 void StreamRenderer::write_queue() {
@@ -486,22 +486,36 @@ void StreamRenderer::write_queue() {
     output_queue.pop_front();
 
     //TODO this doesn't account for read times
-    uint32_t current_depth_req = memory->read_word(depth_address & 0xFFFFFFFC);
-    uint16_t current_depth = (depth_address & 0x10 ? (current_depth_req >> 16) : current_depth_req) & 0xFFFF;
+    const uint32_t current_depth_req = memory->read_word(depth_address & 0xFFFFFFFC);
+
+    uint8_t current_depth;
+    uint32_t new_depth = current_depth_req;
+    switch (depth_address & 0x3) {
+        case 0:
+            current_depth = current_depth_req & 0xFF;
+            new_depth &= 0xFFFFFF00;
+            new_depth |= depth;
+            break;
+        case 1:
+            current_depth = (current_depth_req >> 8) & 0xFF;
+            new_depth &= 0xFFFF00FF;
+            new_depth |= depth << 8;
+            break;
+        case 2:
+            current_depth = (current_depth_req >> 16) & 0xFF;
+            new_depth &= 0xFF00FFFF;
+            new_depth |= depth << 16;
+            break;
+        case 3:
+            current_depth = (current_depth_req >> 24) & 0xFF;
+            new_depth &= 0x00FFFFFF;
+            new_depth |= depth << 24;
+            break;
+    }
 
     if (depth <= current_depth) {
-        std::cout << "write pixel " << pixel << " to address " << pixel_address << "\n";
         memory->write_word(pixel_address, pixel);
-        
-        if (depth_address & 0x10) {
-            current_depth_req &= 0xFFFF;
-            current_depth_req |= uint32_t(depth) << 16;
-        } else {
-            current_depth_req &= 0xFFFF0000;
-            current_depth_req |= uint32_t(depth);
-        }
-
-        memory->write_word(depth_address & 0xFFFFFFFC, current_depth_req);
+        memory->write_word(depth_address & 0xFFFFFFFC, new_depth);
     }
 }
 

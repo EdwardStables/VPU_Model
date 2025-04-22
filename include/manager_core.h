@@ -111,6 +111,7 @@ class ManagerCore {
 
     //Framebuffer output
     uint32_t frames_written = 0;
+    void write_depthbuffer();
     void write_framebuffer();
 
     uint32_t get_int_literal(uint32_t instruction);

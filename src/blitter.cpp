@@ -105,7 +105,7 @@ void Blitter::clear_cycle() {
         }
 
         uint32_t write_addr = pixel_address(working_command.xpos, working_command.ypos);
-        assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+        assert((write_addr & 0x3F) == 0);
         memory->write(write_addr, data);
 
         //Will overwrite end of buffer, but that should be ok for now
@@ -115,8 +115,8 @@ void Blitter::clear_cycle() {
             working_command.ypos++;
         }
     } else {
-        //Depth buffer is just largest possible value, note that it's 16 bits so
-        //this is actually 2x BLITTER_MAX_PIXELS
+        //Depth buffer is just largest possible value, note that it's 8 bits so
+        //this is actually 4x BLITTER_MAX_PIXELS
         for (int i = 0; i < defs::BLITTER_MAX_PIXELS; i++) {
             data[4*i]   = 0xFF;
             data[4*i+1] = 0xFF;
@@ -125,10 +125,10 @@ void Blitter::clear_cycle() {
         }
 
         uint32_t write_addr = depth_address(working_command.xpos, working_command.ypos);
-        assert((write_addr & 0x3F) == 0); //for now only allow 512-bit aligned writes
+        assert((write_addr & 0x3F) == 0);
         memory->write(write_addr, data);
 
-        working_command.xpos += 2*defs::BLITTER_MAX_PIXELS;
+        working_command.xpos += 4*defs::BLITTER_MAX_PIXELS;
         while (working_command.xpos >= defs::FRAMEBUFFER_WIDTH) {
             working_command.xpos -= defs::FRAMEBUFFER_WIDTH;
             working_command.ypos++;

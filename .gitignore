@@ -12,5 +12,6 @@ test/binaries
 *.bin
 .cache
 compile_commands.json
-images/
+frames/
+depth/
 *gif
