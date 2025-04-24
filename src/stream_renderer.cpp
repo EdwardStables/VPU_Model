@@ -355,6 +355,10 @@ void StreamRenderer::render_cycle_process_byte() {
         }
     }
 
+    //TODO I think this should be a valid assertion but it fails, needs to be checked
+    //if (sequence_byte == 0 && !active_byte.length_presence())
+    //    assert(active_byte.terminal() && !draw_voxel);
+
     //*** Determine action ***/
     bool advance_byte = false;
     if (active_byte.terminal()) {
@@ -398,6 +402,7 @@ void StreamRenderer::render_cycle_process_byte() {
         if (process_sequence) { //reset sequence state
             sequence_byte = 0;
             process_sequence = false;
+            draw_voxel = false;
             assert(byte_voxel_count == 0);
         }
     }
@@ -440,7 +445,7 @@ void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
     ) {
         return;
     }
-    
+
     //Make sure we're inside representable range of fixed point format
     assert((next_to_render.x & 0xFFFFF000) == 0);
     assert((next_to_render.y & 0xFFFFF000) == 0);
@@ -514,7 +519,12 @@ void StreamRenderer::write_queue() {
     }
 
     if (depth <= current_depth) {
-        memory->write_word(pixel_address, pixel);
+        uint32_t new_pixel = 0;
+        new_pixel |= (pixel & 0xFF) << 24;
+        new_pixel |= (pixel & 0xFF00) << 8;
+        new_pixel |= (pixel & 0xFF0000) >> 8;
+        new_pixel |= (pixel & 0xFF000000) >> 24;
+        memory->write_word(pixel_address, new_pixel);
         memory->write_word(depth_address & 0xFFFFFFFC, new_depth);
     }
 }
