@@ -8,7 +8,7 @@ The VPU project is a voxel-based graphics processor intended to run on an FPGA. 
 - Blitter (2D drawing) pipeline, including text rendering with hard-coded font
 - Renderer (3D) pipeline (still in progress). Renders models and can apply transforms but has no direct support for rasterisation (assumes 1 voxel = 1 pixel) and has no built-in support for view/camera transforms
 
-The program found [here](https://github.com/EdwardStables/VPU_ASM/blob/main/test_programs/rotate_model.asm) uses the matrix and renderer pipelines to render a spinning model, the following example showing the traditional teapot being rendered.
+The program found [here](https://github.com/EdwardStables/VPU_ASM/blob/main/test_programs/rotate_model.asm) uses the matrix and renderer pipelines to render a spinning model, the following example showing the traditional teapot being rendered. Note that in this example there are errors with the depth calculation which result in colours from behind each segment showing through when they should be invisible.
 
 ![teapot](media/teapot.gif)
 
