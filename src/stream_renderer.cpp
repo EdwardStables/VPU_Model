@@ -451,24 +451,24 @@ void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
     assert((next_to_render.y & 0xFFFFF000) == 0);
     assert((next_to_render.z & 0xFFFFF000) == 0);
 
-    //Scale to account for fixed point
-    uint16_t x_in = 0xFFFF & (next_to_render.x << 4);
-    uint16_t y_in = 0xFFFF & (next_to_render.y << 4);
-    uint16_t z_in = 0xFFFF & (next_to_render.z << 4);
-    uint16_t w_in = 0xFFFF & (1 << 4); //implicit coordinate
-    auto& m = transformation.mat;
+    //Scale to account for fixed point, we can assume no negative input coordinates
+    uint32_t x_in = 0x0000FFFF & (next_to_render.x << 4);
+    uint32_t y_in = 0x0000FFFF & (next_to_render.y << 4);
+    uint32_t z_in = 0x0000FFFF & (next_to_render.z << 4);
+    uint32_t w_in = 0x0000FFFF & (1 << 4); //implicit coordinate
 
     //Apply transformation
+    vpu::matrix::Mat32 m = vpu::matrix::matrix_to_u32(transformation.mat); //Ensure it is extended for u32 type
     uint32_t x = (m[0][0] * x_in) + (m[1][0] * y_in) + (m[2][0] * z_in) + (m[3][0] * w_in);
     uint32_t y = (m[0][1] * x_in) + (m[1][1] * y_in) + (m[2][1] * z_in) + (m[3][1] * w_in);
     uint32_t z = (m[0][2] * x_in) + (m[1][2] * y_in) + (m[2][2] * z_in) + (m[3][2] * w_in);
     uint32_t w = (m[0][3] * x_in) + (m[1][3] * y_in) + (m[2][3] * z_in) + (m[3][3] * w_in);
 
     // Scale back to 12.4 fixed point
-    x >>= 4;
-    y >>= 4;
-    z >>= 4;
-    w >>= 4;
+    x = vpu::matrix::ar_shift_right_u32(x, 4);
+    y = vpu::matrix::ar_shift_right_u32(y, 4);
+    z = vpu::matrix::ar_shift_right_u32(z, 4);
+    w = vpu::matrix::ar_shift_right_u32(w, 4);
 
     //Account for w-scaling, gives scaling factor of 1 as w and x/y/z have same scaling factor
     //This performs both the desired scaling and converting back to integer representation
@@ -477,10 +477,16 @@ void StreamRenderer::render_cycle_submit_voxel(uint32_t colour) {
     z /= w;
     w = 0x0001;
 
+    // Outside bounds
     if (x >= vpu::defs::FRAMEBUFFER_WIDTH || y >= vpu::defs::FRAMEBUFFER_HEIGHT) return;
+    // Skip if negative
+    if (x >= 0x8000 || y >= 0x8000 || z >= 0x8000) return;
+
     uint32_t address = vpu::blit::Blitter::pixel_address(x, y);
     uint32_t depth_address = vpu::blit::Blitter::depth_address(x, y);
-    output_queue.push_back(Defer<q_entry>({address, colour, depth_address, 0xFF & z}));
+    uint8_t depth_value = z > 0xFF ? 0xFF : (z & 0xFF); //only 8-bit depth buffer. Saturate beyond 255
+    //std::cout << z << " " << uint32_t(depth_value) << "\n";
+    output_queue.push_back(Defer<q_entry>({address, colour, depth_address, depth_value}));
 }
 
 void StreamRenderer::write_queue() {
@@ -525,6 +531,8 @@ void StreamRenderer::write_queue() {
         new_pixel |= (pixel & 0xFF0000) >> 8;
         new_pixel |= (pixel & 0xFF000000) >> 24;
         memory->write_word(pixel_address, new_pixel);
+
+        //std::cout << std::hex << (depth_address & 0x3) << " " << current_depth_req << " " << uint32_t(current_depth) << " " << uint32_t(depth) << " " << new_depth << "\n";
         memory->write_word(depth_address & 0xFFFFFFFC, new_depth);
     }
 }

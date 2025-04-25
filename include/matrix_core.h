@@ -62,6 +62,16 @@ struct Command {
 using Vec = std::array<uint16_t,4>;
 using Mat = std::array<Vec,4>;
 
+//Not used as a frequent data type in the pipeline, but required for certain
+//intermediate steps during mathematical operations
+using Vec32 = std::array<uint32_t,4>;
+using Mat32 = std::array<Vec32,4>;
+
+//We exclusively use unsigned integers in the simulation along with hand-coded
+//conversion to best represent that actual hardware working
+uint32_t u16_to_u32(uint16_t v);
+Mat32 matrix_to_u32(const Mat& mat);
+
 class DataRequestor {
     std::unique_ptr<vpu::mem::Memory>& memory;
 
@@ -97,6 +107,7 @@ public:
 uint16_t sin_12_4_fp(uint16_t);
 std::pair<uint16_t,uint16_t> sin_cos_12_4_fp(uint16_t);
 uint16_t ar_shift_right(uint16_t, uint16_t);
+uint32_t ar_shift_right_u32(uint32_t, uint32_t);
 
 class Matrix : public Subsystem<Command> {
     std::unique_ptr<vpu::mem::Memory>& memory;

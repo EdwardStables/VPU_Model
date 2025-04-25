@@ -306,8 +306,8 @@ bool Matrix::matrix_request_cycle() {
     return false;
 }
 
-uint16_t shift_right(uint16_t val, uint16_t shift, bool arithmetic) {
-    if (!arithmetic || (0x8000 & val) == 0) return val >> shift;
+uint16_t ar_shift_right(uint16_t val, uint16_t shift) {
+    if ((0x8000 & val) == 0) return val >> shift;
 
     //TODO not very fast for what it is
     for (int i = 0; i < shift; i++) {
@@ -318,21 +318,56 @@ uint16_t shift_right(uint16_t val, uint16_t shift, bool arithmetic) {
     return val;
 }
 
+uint32_t ar_shift_right_u32(uint32_t val, uint32_t shift) {
+    if ((0x80000000 & val) == 0) return val >> shift;
+
+    //TODO not very fast for what it is
+    for (int i = 0; i < shift; i++) {
+        val >>= 1;
+        val |= 0x80000000;
+    }
+
+    return val;
+}
+
 //TODO negative isn't being handled entirely properly, breaks the rotation program
 uint16_t mat_mul_entry(Mat& i1, Mat& i2, int i1r, int i2c) {
-    bool neg = (i1[i1r][0] & 0x8000) | (i2[0][i2c] & 0x8000);
-    uint16_t t1 = i1[i1r][0]*i2[0][i2c];
+    uint16_t t1 = 0xFFFF & ar_shift_right_u32(u16_to_u32(i1[i1r][0])*u16_to_u32(i2[0][i2c]), 4);
+    uint16_t t2 = 0xFFFF & ar_shift_right_u32(u16_to_u32(i1[i1r][1])*u16_to_u32(i2[1][i2c]), 4);
+    uint16_t t3 = 0xFFFF & ar_shift_right_u32(u16_to_u32(i1[i1r][2])*u16_to_u32(i2[2][i2c]), 4);
+    uint16_t t4 = 0xFFFF & ar_shift_right_u32(u16_to_u32(i1[i1r][3])*u16_to_u32(i2[3][i2c]), 4);
 
-    neg |= (i1[i1r][1] & 0x8000) | (i2[1][i2c] & 0x8000);
-    uint16_t t2 = i1[i1r][1]*i2[1][i2c];
+    return t1 + t2 + t3 + t4;
+}
 
-    neg |= (i1[i1r][2] & 0x8000) | (i2[2][i2c] & 0x8000);
-    uint16_t t3 = i1[i1r][2]*i2[2][i2c];
+uint32_t u16_to_u32(uint16_t v) {
+    if (!(0x8000 & v)) {
+        return v;
+    } else {
+        return 0xFFFF0000 | v;
+    }
+}
 
-    neg |= (i1[i1r][3] & 0x8000) | (i2[3][i2c] & 0x8000);
-    uint16_t t4 = i1[i1r][3]*i2[3][i2c];
+Mat32 matrix_to_u32(const Mat& mat) {
+    Mat32 output = {};
+    output[0][0] = u16_to_u32(mat[0][0]);
+    output[0][1] = u16_to_u32(mat[0][1]);
+    output[0][2] = u16_to_u32(mat[0][2]);
+    output[0][3] = u16_to_u32(mat[0][3]);
+    output[1][0] = u16_to_u32(mat[1][0]);
+    output[1][1] = u16_to_u32(mat[1][1]);
+    output[1][2] = u16_to_u32(mat[1][2]);
+    output[1][3] = u16_to_u32(mat[1][3]);
+    output[2][0] = u16_to_u32(mat[2][0]);
+    output[2][1] = u16_to_u32(mat[2][1]);
+    output[2][2] = u16_to_u32(mat[2][2]);
+    output[2][3] = u16_to_u32(mat[2][3]);
+    output[3][0] = u16_to_u32(mat[3][0]);
+    output[3][1] = u16_to_u32(mat[3][1]);
+    output[3][2] = u16_to_u32(mat[3][2]);
+    output[3][3] = u16_to_u32(mat[3][3]);
 
-    return shift_right(t1 + t2 + t3 + t4, 4, neg);
+    return output;
 }
 
 void Matrix::matrix_mult_cycle() {

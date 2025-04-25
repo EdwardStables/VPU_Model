@@ -9,6 +9,7 @@
 #include "subsystem.h"
 #include "memory.h"
 #include "cycle_defer.h"
+#include "matrix_core.h"
 
 /*
 The initial rendering system. Takes an address to a single stream object and updates the frame buffer with it.
@@ -180,7 +181,7 @@ struct Command {
 struct TransformationCache {
     uint32_t current_address;
     bool valid = false;
-    uint16_t mat[4][4];
+    vpu::matrix::Mat mat;
 };
 
 enum class RenderState {
